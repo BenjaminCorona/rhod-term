@@ -18,6 +18,87 @@ struct PtyState {
     sessions: Arc<Mutex<HashMap<String, PtySession>>>,
 }
 
+// Preparar scripts de integración de shell nativos para Rhod
+fn setup_shell_integration(cmd: &mut CommandBuilder, _shell: &str) {
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("FORCE_COLOR", "3");
+    cmd.env("CLICOLOR", "1");
+    cmd.env("LSCOLORS", "exfxcxdxbxegedabagacad");
+    cmd.env("RHOD_TERMINAL", "1");
+
+    let runtime_dir = std::env::temp_dir().join("rhod-shell");
+    if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
+        eprintln!("[rhod] Error creando dir de shell integration: {}", e);
+        return;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let zsh_integration = include_str!("../shell-integration/rhod.zsh");
+        let _ = std::fs::write(runtime_dir.join("rhod.zsh"), zsh_integration);
+
+        let zshrc = include_str!("../shell-integration/zshrc.template");
+        let _ = std::fs::write(runtime_dir.join(".zshrc"), zshrc);
+
+        let zprofile = include_str!("../shell-integration/zprofile.template");
+        let _ = std::fs::write(runtime_dir.join(".zprofile"), zprofile);
+
+        // Extraer zsh-syntax-highlighting empaquetado en el binario
+        let syh_dir = runtime_dir.join("zsh-syntax-highlighting");
+        let main_hl_dir = syh_dir.join("highlighters/main");
+        let _ = std::fs::create_dir_all(&main_hl_dir);
+
+        let _ = std::fs::write(
+            syh_dir.join("zsh-syntax-highlighting.zsh"),
+            include_str!("../shell-integration/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"),
+        );
+        let _ = std::fs::write(
+            main_hl_dir.join("main-highlighter.zsh"),
+            include_str!("../shell-integration/zsh-syntax-highlighting/highlighters/main/main-highlighter.zsh"),
+        );
+        let _ = std::fs::write(
+            syh_dir.join(".version"),
+            include_str!("../shell-integration/zsh-syntax-highlighting/.version"),
+        );
+        let _ = std::fs::write(
+            syh_dir.join(".revision-hash"),
+            include_str!("../shell-integration/zsh-syntax-highlighting/.revision-hash"),
+        );
+
+        if let Ok(orig) = std::env::var("ZDOTDIR") {
+            cmd.env("_RHOD_ORIG_ZDOTDIR", orig);
+        }
+        cmd.env("ZDOTDIR", runtime_dir.to_string_lossy().to_string());
+        cmd.env("RHOD_SHELL_DIR", runtime_dir.to_string_lossy().to_string());
+        cmd.arg("-l");
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let ps_integration = include_str!("../shell-integration/rhod.ps1");
+        let ps_file = runtime_dir.join("rhod.ps1");
+        let _ = std::fs::write(&ps_file, ps_integration);
+
+        cmd.args([
+            "-NoExit",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            &ps_file.to_string_lossy().to_string(),
+        ]);
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        let bash_integration = include_str!("../shell-integration/rhod.bash");
+        let bash_file = runtime_dir.join("rhod.bash");
+        let _ = std::fs::write(&bash_file, bash_integration);
+
+        cmd.args(["--rcfile", &bash_file.to_string_lossy().to_string(), "-i"]);
+    }
+}
+
 // 1. Iniciar sesión de terminal cross-platform (Windows: ConPTY, macOS/Linux: POSIX PTY)
 #[tauri::command]
 fn start_pty(id: String, app: AppHandle, state: State<'_, PtyState>) -> Result<(), String> {
@@ -51,8 +132,7 @@ fn start_pty(id: String, app: AppHandle, state: State<'_, PtyState>) -> Result<(
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
 
     let mut cmd = CommandBuilder::new(&shell);
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
+    setup_shell_integration(&mut cmd, &shell);
 
     let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
     let pid = child.process_id();

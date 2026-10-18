@@ -1,0 +1,17 @@
+# 1. Restaurar ZDOTDIR original si existia
+if [[ -n "$_RHOD_ORIG_ZDOTDIR" ]]; then
+  export ZDOTDIR="$_RHOD_ORIG_ZDOTDIR"
+else
+  unset ZDOTDIR
+fi
+
+# 2. Cargar la configuracion original del usuario (~/.zshrc)
+if [[ -f "$HOME/.zshrc" ]]; then
+  source "$HOME/.zshrc"
+fi
+
+# 3. Cargar la integracion de Rhod (colores, resaltado nativo en tiempo real y alias)
+_rhod_dir="${RHOD_SHELL_DIR:-${${(%):-%x}:A:h}}"
+if [[ -f "$_rhod_dir/rhod.zsh" ]]; then
+  source "$_rhod_dir/rhod.zsh"
+fi
