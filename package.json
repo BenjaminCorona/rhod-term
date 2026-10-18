@@ -1,13 +1,16 @@
 {
   "name": "rhod",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "bump:patch": "node scripts/bump.js patch",
+    "bump:minor": "node scripts/bump.js minor",
+    "bump:major": "node scripts/bump.js major"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
