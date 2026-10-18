@@ -5,6 +5,10 @@ else
   unset ZDOTDIR
 fi
 
+# Asegurar Cargo y Homebrew en el PATH
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 # 2. Cargar la configuracion original del usuario (~/.zshrc)
 if [[ -f "$HOME/.zshrc" ]]; then
   source "$HOME/.zshrc"

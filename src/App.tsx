@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import {
   Terminal as TerminalIcon,
@@ -375,6 +376,13 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("0.2.2");
+
+  useEffect(() => {
+    getVersion()
+      .then((v) => setAppVersion(v))
+      .catch(() => {});
+  }, []);
 
   const [context, setContext] = useState<SystemContext>({
     cwd: "~",
@@ -792,6 +800,19 @@ export default function App() {
             <Plus size={13} />
           </button>
         </div>
+
+        <div className="header-right">
+          <span
+            className="header-version"
+            onClick={() => {
+              navigator.clipboard.writeText(`v${appVersion}`);
+              showToast(`Versión v${appVersion} copiada`);
+            }}
+            title="Versión de Rhod (clic para copiar)"
+          >
+            v{appVersion}
+          </span>
+        </div>
       </header>
 
       {/* 2. Área principal de Terminal */}
@@ -866,6 +887,17 @@ export default function App() {
         </div>
 
         <div className="status-info">
+          <div
+            className="status-item version-badge"
+            onClick={() => {
+              navigator.clipboard.writeText(`v${appVersion}`);
+              showToast(`Versión v${appVersion} copiada`);
+            }}
+            title="Versión de Rhod (clic para copiar)"
+          >
+            <span>v{appVersion}</span>
+          </div>
+
           {/* Indicador interactivo del tamaño de fuente */}
           <div
             className="status-item font-size-item"
@@ -956,7 +988,7 @@ export default function App() {
             </div>
 
             <div className="modal-footer-bar">
-              <span>Haz clic en cualquier atajo para ejecutarlo directamente</span>
+              <span>Haz clic en cualquier atajo para ejecutarlo directamente • Rhod v{appVersion}</span>
               <kbd>ESC</kbd>
             </div>
           </div>

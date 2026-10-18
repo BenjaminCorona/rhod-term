@@ -600,3 +600,45 @@ body,
   gap: 6px;
   z-index: 200;
 }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-version {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: var(--text-muted);
+  opacity: 0.65;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.header-version:hover {
+  opacity: 1;
+  color: var(--text-main);
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+}
+
+.version-badge {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.version-badge:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+}

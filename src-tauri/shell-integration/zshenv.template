@@ -1,0 +1,5 @@
+if [[ -f "$HOME/.zshenv" ]]; then
+  source "$HOME/.zshenv"
+fi
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"

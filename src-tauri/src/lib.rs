@@ -27,6 +27,14 @@ fn setup_shell_integration(cmd: &mut CommandBuilder, _shell: &str) {
     cmd.env("LSCOLORS", "exfxcxdxbxegedabagacad");
     cmd.env("RHOD_TERMINAL", "1");
 
+    // Asegurar que herramientas de desarrollo (Cargo, Homebrew) esten en PATH
+    if let Ok(current_path) = std::env::var("PATH") {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let cargo_bin = format!("{}/.cargo/bin", home);
+        let extra_paths = format!("{}:/opt/homebrew/bin:/usr/local/bin:{}", cargo_bin, current_path);
+        cmd.env("PATH", extra_paths);
+    }
+
     let runtime_dir = std::env::temp_dir().join("rhod-shell");
     if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
         eprintln!("[rhod] Error creando dir de shell integration: {}", e);
@@ -43,6 +51,9 @@ fn setup_shell_integration(cmd: &mut CommandBuilder, _shell: &str) {
 
         let zprofile = include_str!("../shell-integration/zprofile.template");
         let _ = std::fs::write(runtime_dir.join(".zprofile"), zprofile);
+
+        let zshenv = include_str!("../shell-integration/zshenv.template");
+        let _ = std::fs::write(runtime_dir.join(".zshenv"), zshenv);
 
         // Extraer zsh-syntax-highlighting empaquetado en el binario
         let syh_dir = runtime_dir.join("zsh-syntax-highlighting");
