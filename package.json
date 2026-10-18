@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "bump:patch": "node scripts/bump.js patch",
     "bump:minor": "node scripts/bump.js minor",
-    "bump:major": "node scripts/bump.js major"
+    "bump:major": "node scripts/bump.js major",
+    "build:dmg": "node scripts/create_dmg.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
