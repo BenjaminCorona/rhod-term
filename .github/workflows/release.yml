@@ -16,8 +16,6 @@ jobs:
         include:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-13' # Intel x86_64
-            args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
           - platform: 'windows-latest'
@@ -42,7 +40,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
       - name: Install Linux dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -60,7 +58,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Rhod v__VERSION__'
-          releaseBody: 'Consola terminal minimalista y ultra liviana para macOS, Windows y Linux.'
+          releaseBody: 'Consola Rhod minimalista y ultra liviana para macOS, Windows y Linux.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
