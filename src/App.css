@@ -1,0 +1,602 @@
+:root {
+  /* ============================================================
+     SISTEMA MINIMALISTA PROFESIONAL (ESTILO ZED / LINEAR / RAYCAST)
+     Sin resplandores (glows), sin sombras chillonas, sin neones.
+     Superficies mate, bordes de 1px y tipografía limpia.
+     ============================================================ */
+  --bg-canvas: #111113;
+  --bg-surface: #161618;
+  --bg-surface-elevated: #1c1c1f;
+  --bg-hover: #222226;
+  --bg-active: #2a2a2f;
+
+  --border-subtle: #222225;
+  --border-medium: #2e2e33;
+
+  --text-main: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-faint: #52525b;
+
+  --accent-subtle: #3f3f46;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  user-select: none;
+}
+
+/* Layout completo */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-canvas);
+  position: relative;
+}
+
+/* ============================================================
+   1. HEADER MINIMALISTA
+   ============================================================ */
+.app-header {
+  height: 38px;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.tabs-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tab-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.tab-item.active {
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+.tab-icon {
+  color: var(--text-muted);
+}
+
+.tab-item.active .tab-icon {
+  color: var(--text-main);
+}
+
+.tab-name {
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+.tab-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+  margin-left: 2px;
+}
+
+.tab-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  opacity: 1;
+}
+
+.btn-new-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-new-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Atajos rápidos en el header */
+.quick-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-quick {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-quick:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-subtle);
+  margin: 0 4px;
+}
+
+/* Botones de acción estándar */
+.btn-action,
+.btn-icon {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action {
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.btn-icon {
+  padding: 5px;
+}
+
+.btn-action:hover,
+.btn-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.btn-palette {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+}
+
+.btn-palette kbd {
+  font-size: 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
+}
+
+/* ============================================================
+   2. TERMINAL VIEWPORT
+   ============================================================ */
+.terminal-container {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  background-color: var(--bg-canvas);
+  overflow: hidden;
+}
+
+.terminal-pane {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 6px 12px 2px 12px;
+  overflow: hidden;
+}
+
+.xterm {
+  height: 100%;
+  padding: 0;
+}
+
+.xterm .xterm-viewport {
+  background-color: var(--bg-canvas) !important;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* ============================================================
+   3. BARRA DE ESTADO INFERIOR (DISCRETA Y ELEGANTE)
+   ============================================================ */
+.app-statusbar {
+  height: 28px;
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.status-item:hover {
+  color: var(--text-main);
+}
+
+.font-size-item {
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.font-size-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #22c55e;
+}
+
+/* ============================================================
+   4. PALETA DE COMANDOS (ESTILO RAYCAST / SPOTLIGHT)
+   ============================================================ */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 70px;
+  z-index: 100;
+}
+
+.modal-dialog {
+  width: 90%;
+  max-width: 560px;
+  max-height: 70vh;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.input-icon {
+  color: var(--text-muted);
+}
+
+.command-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.command-input::placeholder {
+  color: var(--text-faint);
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover {
+  color: var(--text-main);
+}
+
+.modal-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-btn:hover {
+  color: var(--text-main);
+}
+
+.filter-btn.active {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.modal-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modal-list::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 2px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.list-row:hover {
+  background: var(--bg-hover);
+}
+
+.row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row-cmd {
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.row-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.key-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.shortcut-keys kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.key-sep {
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+.row-badge {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.row-enter {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.list-row:hover .row-enter {
+  opacity: 1;
+}
+
+.list-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.modal-footer-bar {
+  padding: 7px 14px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.modal-footer-bar kbd {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+}
+
+/* ============================================================
+   5. TOAST DISCRETO
+   ============================================================ */
+.toast-notification {
+  position: absolute;
+  bottom: 40px;
+  right: 16px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  color: var(--text-main);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 200;
+}
