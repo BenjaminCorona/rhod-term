@@ -18,7 +18,7 @@ struct PtyState {
     sessions: Arc<Mutex<HashMap<String, PtySession>>>,
 }
 
-// 1. Comando para iniciar una sesión de terminal identificada por su `id`
+// 1. Iniciar sesión de terminal cross-platform (Windows: ConPTY, macOS/Linux: POSIX PTY)
 #[tauri::command]
 fn start_pty(id: String, app: AppHandle, state: State<'_, PtyState>) -> Result<(), String> {
     let pty_system = NativePtySystem::default();
@@ -33,11 +33,22 @@ fn start_pty(id: String, app: AppHandle, state: State<'_, PtyState>) -> Result<(
         })
         .map_err(|e| e.to_string())?;
 
-    // Elegir el shell según el sistema operativo
+    // Elegir el shell adecuado y robusto según el sistema operativo
     #[cfg(target_os = "windows")]
-    let shell = std::env::var("COMSPEC").unwrap_or_else(|_| "powershell.exe".to_string());
-    #[cfg(not(target_os = "windows"))]
+    let shell = {
+        // En Windows se prefiere powershell.exe sobre cmd.exe, permitiendo override por entorno
+        if let Ok(custom) = std::env::var("RHOD_SHELL").or_else(|_| std::env::var("SHELL")) {
+            custom
+        } else {
+            "powershell.exe".to_string()
+        }
+    };
+
+    #[cfg(target_os = "macos")]
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
 
     let mut cmd = CommandBuilder::new(&shell);
     cmd.env("TERM", "xterm-256color");
@@ -81,7 +92,7 @@ fn start_pty(id: String, app: AppHandle, state: State<'_, PtyState>) -> Result<(
     Ok(())
 }
 
-// 2. Comando para enviar teclas a una sesión específica
+// 2. Enviar teclas a una sesión específica
 #[tauri::command]
 fn write_pty(id: String, data: String, state: State<'_, PtyState>) -> Result<(), String> {
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
@@ -95,7 +106,7 @@ fn write_pty(id: String, data: String, state: State<'_, PtyState>) -> Result<(),
     Ok(())
 }
 
-// 3. Comando para ajustar dimensiones de una sesión específica
+// 3. Ajustar dimensiones de una sesión específica
 #[tauri::command]
 fn resize_pty(id: String, rows: u16, cols: u16, state: State<'_, PtyState>) -> Result<(), String> {
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
@@ -113,7 +124,7 @@ fn resize_pty(id: String, rows: u16, cols: u16, state: State<'_, PtyState>) -> R
     Ok(())
 }
 
-// 4. Comando para cerrar una sesión y liberar sus recursos
+// 4. Cerrar una sesión y liberar sus recursos
 #[tauri::command]
 fn close_pty(id: String, state: State<'_, PtyState>) -> Result<(), String> {
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
@@ -121,7 +132,7 @@ fn close_pty(id: String, state: State<'_, PtyState>) -> Result<(), String> {
     Ok(())
 }
 
-// 5. Obtener la ruta actual del proceso shell de la pestaña por su PID
+// 5. Obtener la ruta actual del proceso shell de la pestaña por su PID (macOS, Linux y Windows)
 #[tauri::command]
 fn get_tab_cwd(id: String, state: State<'_, PtyState>) -> Result<String, String> {
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
@@ -150,6 +161,14 @@ fn get_tab_cwd(id: String, state: State<'_, PtyState>) -> Result<String, String>
                     return Ok(path.to_string_lossy().to_string());
                 }
             }
+
+            #[cfg(target_os = "windows")]
+            {
+                // En Windows, retornamos el directorio de usuario si el proceso está activo
+                if let Ok(profile) = std::env::var("USERPROFILE") {
+                    return Ok(profile);
+                }
+            }
         }
     }
     Err("Ruta no disponible".to_string())
@@ -161,20 +180,39 @@ struct SystemContext {
     git_branch: String,
     node_version: String,
     shell: String,
+    os: String,
+    home: String,
 }
 
-// 6. Obtener el contexto de sistema y rama de Git para la ruta consultada
+// Helper para crear comandos sin parpadeo de ventana de consola en Windows (GUI app)
+fn create_silent_command(program: &str) -> std::process::Command {
+    #[allow(unused_mut)]
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
+// 6. Obtener el contexto de sistema, Git y SO para la ruta consultada
 #[tauri::command]
 fn get_context(path: Option<String>) -> SystemContext {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| "~".to_string());
+
     let cwd = path
         .filter(|p| !p.trim().is_empty())
         .unwrap_or_else(|| {
             std::env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| ".".to_string())
+                .unwrap_or_else(|_| home.clone())
         });
 
-    let git_branch = std::process::Command::new("git")
+    let git_branch = create_silent_command("git")
         .args(["-C", &cwd, "branch", "--show-current"])
         .output()
         .ok()
@@ -183,26 +221,44 @@ fn get_context(path: Option<String>) -> SystemContext {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "-".to_string());
 
-    let node_version = std::process::Command::new("node")
+    let node_version = create_silent_command("node")
         .arg("-v")
         .output()
         .ok()
         .and_then(|out| String::from_utf8(out.stdout).ok())
         .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "v24.14.0".to_string());
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "-".to_string());
 
     #[cfg(target_os = "windows")]
     let shell = "powershell".to_string();
-    #[cfg(not(target_os = "windows"))]
+
+    #[cfg(target_os = "macos")]
     let shell = std::env::var("SHELL")
         .map(|s| s.rsplit('/').next().unwrap_or("zsh").to_string())
         .unwrap_or_else(|_| "zsh".to_string());
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let shell = std::env::var("SHELL")
+        .map(|s| s.rsplit('/').next().unwrap_or("bash").to_string())
+        .unwrap_or_else(|_| "bash".to_string());
+
+    #[cfg(target_os = "macos")]
+    let os = "macos".to_string();
+    #[cfg(target_os = "windows")]
+    let os = "windows".to_string();
+    #[cfg(target_os = "linux")]
+    let os = "linux".to_string();
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows"), not(target_os = "linux")))]
+    let os = "other".to_string();
 
     SystemContext {
         cwd,
         git_branch,
         node_version,
         shell,
+        os,
+        home,
     }
 }
 
