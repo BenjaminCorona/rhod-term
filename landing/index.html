@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rhod — La Terminal Ultra Ligera en Rust</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,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">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-surface: #121215;
+      --bg-elevated: #18181c;
+      --bg-hover: #202026;
+      --border: #222227;
+      --border-focus: #3a3a44;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      --green: #4ade80;
+      --accent-glow: rgba(255, 255, 255, 0.06);
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      overflow-x: hidden;
+      line-height: 1.6;
+      background-color: var(--bg);
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Fondo animado sutil con rejilla y haz ambiental */
+    .bg-grid-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 900px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      mask-image: radial-gradient(ellipse 65% 55% at 50% 15%, #000 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 15%, #000 20%, transparent 80%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(160, 160, 190, 0.08) 0%, rgba(20, 20, 30, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulseGlow 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { opacity: 0.5; transform: translateX(-50%) scale(0.95); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* Header y Navegación */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(9, 9, 11, 0.78);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s;
+    }
+
+    .nav-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 13px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 15.5px;
+      letter-spacing: -0.3px;
+    }
+
+    .brand img {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .brand:hover img {
+      transform: rotate(-6deg) scale(1.08);
+    }
+
+    .version-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 1px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 400;
+      transition: color 0.15s ease;
+      position: relative;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-github:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-focus);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      z-index: 1;
+      max-width: 980px;
+      margin: 90px auto 40px;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .pill-announcement {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 16px;
+      background: rgba(22, 22, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 100px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      animation: heroFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+    }
+
+    .pill-announcement:hover {
+      background: var(--bg-elevated);
+      border-color: rgba(255, 255, 255, 0.16);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .pulse-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .pulse-ring {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: rgba(74, 222, 128, 0.35);
+      animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    h1.hero-title {
+      font-size: clamp(42px, 6.5vw, 70px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      color: #ffffff;
+      animation: heroFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(180deg, #f4f4f5 20%, #71717a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+
+    .hero-desc {
+      font-size: clamp(16px, 2.2vw, 19.5px);
+      color: var(--text-muted);
+      max-width: 660px;
+      margin: 0 auto 38px;
+      font-weight: 300;
+      line-height: 1.55;
+      animation: heroFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+    }
+
+    .hero-desc strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 34px;
+      animation: heroFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+    }
+
+    .btn-primary {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #f4f4f5;
+      color: #09090b;
+      padding: 13px 28px;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    }
+
+    .btn-primary::after {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: rotate(25deg);
+      transition: all 0.6s ease;
+    }
+
+    .btn-primary:hover::after {
+      left: 120%;
+    }
+
+    .btn-primary:hover {
+      background: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255, 255, 255, 0.18);
+    }
+
+    .btn-os-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .download-subtext {
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .download-subtext a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+
+    .download-subtext a:hover {
+      color: var(--text);
+    }
+
+    /* Píldoras con iconos SVG Lucide */
+    .hero-specs-bar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 10px 22px;
+      background: rgba(18, 18, 22, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      backdrop-filter: blur(10px);
+      animation: heroFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .spec-icon {
+      display: inline-flex;
+      align-items: center;
+      color: #60a5fa;
+    }
+
+    .spec-item span.val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .spec-sep {
+      color: var(--border);
+    }
+
+    /* Terminal Preview interactiva */
+    .preview-container {
+      position: relative;
+      z-index: 2;
+      max-width: 900px;
+      margin: 45px auto 100px;
+      padding: 0 20px;
+      animation: heroScaleUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+    }
+
+    .app-window {
+      background: #111113;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 11px;
+      overflow: hidden;
+      box-shadow: 
+        0 25px 70px -10px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.2s;
+    }
+
+    .app-window:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow: 
+        0 30px 85px -10px rgba(0, 0, 0, 0.95),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .window-header {
+      height: 38px;
+      background: #161618;
+      border-bottom: 1px solid #222225;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 14px;
+      user-select: none;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+    }
+
+    .traffic-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .tabs-strip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      overflow-x: auto;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 11px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      color: #71717a;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tab:hover {
+      background: #222226;
+      color: #a1a1aa;
+    }
+
+    .tab.active {
+      background: #1c1c1f;
+      border-color: #2e2e33;
+      color: #f4f4f5;
+    }
+
+    .tab-close {
+      font-size: 12px;
+      opacity: 0.5;
+    }
+
+    .tab-plus {
+      color: #71717a;
+      cursor: pointer;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .tab-plus:hover {
+      background: #222226;
+      color: #f4f4f5;
+    }
+
+    .terminal-body {
+      padding: 22px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 290px;
+      color: #d4d4d8;
+      background: #111113;
+    }
+
+    .term-line {
+      margin-bottom: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .term-prompt {
+      color: #60a5fa;
+      font-weight: 500;
+    }
+
+    .term-path {
+      color: #a1a1aa;
+    }
+
+    .term-branch {
+      color: #c084fc;
+      font-size: 11.5px;
+    }
+
+    .term-cmd {
+      color: #f4f4f5;
+    }
+
+    .term-output {
+      color: #a1a1aa;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+    }
+
+    .term-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 14px 0 8px;
+    }
+
+    .chip-btn {
+      background: #1a1a1e;
+      border: 1px solid #27272a;
+      color: #a1a1aa;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chip-btn:hover {
+      background: #27272a;
+      color: #f4f4f5;
+      border-color: #3f3f46;
+      transform: translateY(-1px);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .cli-input {
+      background: transparent;
+      border: none;
+      color: #f4f4f5;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      flex: 1;
+      outline: none;
+    }
+
+    .cursor-blink {
+      display: inline-block;
+      width: 7px;
+      height: 15px;
+      background: #a1a1aa;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .window-footer {
+      height: 29px;
+      background: #141417;
+      border-top: 1px solid #222225;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 11px;
+      color: #71717a;
+      user-select: none;
+    }
+
+    .footer-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Gráficas Animadas */
+    .section {
+      max-width: 960px;
+      margin: 0 auto 110px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-tag {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #60a5fa;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(28px, 4.2vw, 38px);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 14px;
+    }
+
+    .section-desc {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 15.5px;
+      max-width: 600px;
+      margin: 0 auto 52px;
+    }
+
+    .charts-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 34px 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .chart-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .chart-card:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .chart-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chart-title-icon {
+      display: inline-flex;
+      align-items: center;
+      color: #60a5fa;
+    }
+
+    .chart-title-area h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    .chart-tag-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .chart-note {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+    }
+
+    .chart-rows-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chart-bar-row {
+      display: grid;
+      grid-template-columns: 210px 1fr 90px;
+      align-items: center;
+      gap: 16px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+
+    @media (max-width: 650px) {
+      .chart-bar-row {
+        grid-template-columns: 140px 1fr 70px;
+        gap: 10px;
+        font-size: 11.5px;
+      }
+    }
+
+    .category-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .category-label.rhod-label {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .category-label.rhod-label span.pill {
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .chart-track {
+      height: 22px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .chart-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 5px;
+      transition: width 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .chart-fill.fill-rhod {
+      background: linear-gradient(90deg, #10b981 0%, #4ade80 100%);
+      box-shadow: 0 0 14px rgba(74, 222, 128, 0.35);
+    }
+
+    .chart-fill.fill-native {
+      background: linear-gradient(90deg, #3f3f46 0%, #71717a 100%);
+    }
+
+    .chart-fill.fill-electron {
+      background: linear-gradient(90deg, #7f1d1d 0%, #ef4444 100%);
+      opacity: 0.8;
+    }
+
+    .chart-val {
+      text-align: right;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chart-val.rhod-val {
+      color: var(--green);
+    }
+
+    /* Grid de características con Lucide icons */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 26px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      color: var(--text);
+      transition: transform 0.2s;
+    }
+
+    .feature-card:hover .feature-icon {
+      transform: scale(1.08);
+      border-color: var(--border-focus);
+    }
+
+    .feature-title {
+      font-size: 16.5px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .feature-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      background: #09090b;
+      padding: 55px 24px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-content {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      font-size: 13.5px;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Animaciones de entrada */
+    @keyframes heroFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes heroScaleUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  
+    /* Modal de descargas directas */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background: #141417;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      max-width: 520px;
+      width: 100%;
+      padding: 26px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+      animation: modalFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: left;
+    }
+
+    @keyframes modalFade {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .modal-close:hover {
+      color: #ffffff;
+    }
+
+    .modal-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    .platforms-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .platform-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #1a1a1e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .platform-link:hover {
+      background: #222227;
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateX(2px);
+    }
+
+    .platform-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .platform-info strong {
+      font-size: 14px;
+      color: #f4f4f5;
+    }
+
+    .platform-info span {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .file-badge {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--green);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Fondo sutil con rejilla y luz ambiental -->
+  <div class="bg-grid-overlay"></div>
+  <div class="ambient-glow"></div>
+
+  <!-- 1. Navegación Superior -->
+  <nav>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <img src="data:image/png;base64,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" alt="Rhod Logo">
+        <span>Rhod</span>
+        <span class="version-badge">v0.2.0</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#benchmarks">Métricas</a>
+        <a href="#caracteristicas">Características</a>
+        <a href="#demo">Demo en vivo</a>
+        <a href="https://github.com/BenjaminCorona/rhod-term" target="_blank" class="btn-github">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 2. Hero Section con Iconos Vectoriales Lucide -->
+  <header class="hero">
+    <a href="https://github.com/BenjaminCorona/rhod-term/releases/tag/v0.2.0" target="_blank" class="pill-announcement">
+      <span class="pulse-wrapper">
+        <span class="pulse-ring"></span>
+        <span class="pulse-dot"></span>
+      </span>
+      <span>Rhod v0.2.0 — Nativa en Rust para Apple Silicon, Windows & Linux</span>
+      <span style="opacity: 0.6;">→</span>
+    </a>
+
+    <h1 class="hero-title">
+      La terminal que tu máquina merece.<br>
+      <span class="gradient-text">Rápida. Ligera. En Rust.</span>
+    </h1>
+
+    <p class="hero-desc">
+      Rhod reemplaza el peso desmedido de Electron por un <strong>núcleo compilado en Rust</strong>, multi-pestañas con subprocesos aislados y contexto Git automático en tiempo real. <strong>Apenas 58 MB de RAM.</strong>
+    </p>
+
+    <div class="hero-actions">
+      <!-- Botón inteligente con icono del OS -->
+      <a id="main-download-btn" href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_aarch64.dmg" class="btn-primary" download>
+        <span id="os-icon" class="btn-os-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 1.01-2.87-.96.04-2.08.64-2.73 1.4-.58.67-.99 1.74-.93 2.78 1.05.08 2.05-.56 2.65-1.31z"/></svg>
+        </span>
+        <span id="download-btn-text">Descargar para macOS (Apple Silicon)</span>
+      </a>
+
+      <div class="download-subtext">
+        <span id="os-subtext">Descarga directa para chips Apple Silicon (.dmg)</span> • 
+        <a href="#modal" id="open-platforms-btn">Ver todas las plataformas (.exe, .deb, .msi)</a>
+      </div>
+
+      <!-- Modal de Descargas Directas para Todos los Sistemas Operativos -->
+      <div id="platforms-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-box">
+          <div class="modal-header">
+            <h3>Descargar Rhod v0.2.0</h3>
+            <button type="button" id="close-modal-btn" class="modal-close">&times;</button>
+          </div>
+          <p class="modal-desc">Haz clic en el archivo correspondiente a tu sistema operativo para descargarlo directamente:</p>
+          
+          <div class="platforms-list">
+            <a href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_aarch64.dmg" class="platform-link" download>
+              <div class="platform-info">
+                <strong>macOS (Apple Silicon)</strong>
+                <span>Instalador oficial .dmg (Chips M1, M2, M3, M4)</span>
+              </div>
+              <span class="file-badge">.dmg</span>
+            </a>
+
+            <a href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_x64-setup.exe" class="platform-link" download>
+              <div class="platform-info">
+                <strong>Windows (Instalador ejecutable)</strong>
+                <span>Instalador rápido de 64-bit (.exe)</span>
+              </div>
+              <span class="file-badge">.exe</span>
+            </a>
+
+            <a href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_x64_en-US.msi" class="platform-link" download>
+              <div class="platform-info">
+                <strong>Windows (Instalador MSI)</strong>
+                <span>Paquete de Windows Installer (.msi)</span>
+              </div>
+              <span class="file-badge">.msi</span>
+            </a>
+
+            <a href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_amd64.deb" class="platform-link" download>
+              <div class="platform-info">
+                <strong>Linux (Debian / Ubuntu)</strong>
+                <span>Paquete nativo .deb para Ubuntu, Debian y derivadas</span>
+              </div>
+              <span class="file-badge">.deb</span>
+            </a>
+
+            <a href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_amd64.AppImage" class="platform-link" download>
+              <div class="platform-info">
+                <strong>Linux (AppImage Portable)</strong>
+                <span>Ejecutable universal sin necesidad de instalación</span>
+              </div>
+              <span class="file-badge">.AppImage</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de especificaciones con Iconos SVG Lucide (Cero Emojis) -->
+    <div class="hero-specs-bar">
+      <div class="spec-item">
+        <span class="spec-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+        <span>Arranque:</span>
+        <span class="val">~45 ms</span>
+      </div>
+      <span class="spec-sep">•</span>
+      <div class="spec-item">
+        <span class="spec-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span>
+        <span>Memoria:</span>
+        <span class="val">58 MB</span>
+      </div>
+      <span class="spec-sep">•</span>
+      <div class="spec-item">
+        <span class="spec-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"></line><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><line x1="6" y1="16" x2="6.01" y2="16"></line><line x1="10" y1="16" x2="10.01" y2="16"></line></svg></span>
+        <span>Peso:</span>
+        <span class="val">5.0 MB</span>
+      </div>
+      <span class="spec-sep">•</span>
+      <div class="spec-item">
+        <span class="spec-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+        <span>Privacidad:</span>
+        <span class="val">0 Rastreadores</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3. Terminal Interactiva Embebida -->
+  <section class="preview-container" id="demo">
+    <div class="app-window">
+      <!-- Barra superior de la app -->
+      <div class="window-header">
+        <div class="traffic-lights">
+          <div class="traffic-dot dot-red"></div>
+          <div class="traffic-dot dot-yellow"></div>
+          <div class="traffic-dot dot-green"></div>
+        </div>
+        <div class="tabs-strip">
+          <div class="tab active" data-tab="rhod-term">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span>rhod-term</span>
+            <span class="tab-close">✕</span>
+          </div>
+          <div class="tab" data-tab="backend-api">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span>backend-api</span>
+            <span class="tab-close">✕</span>
+          </div>
+          <div class="tab" data-tab="docker-env">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span>docker</span>
+            <span class="tab-close">✕</span>
+          </div>
+          <span class="tab-plus" title="Nueva pestaña (⌘T)">+</span>
+        </div>
+      </div>
+
+      <!-- Cuerpo de la terminal -->
+      <div class="terminal-body" id="term-display">
+        <div class="term-line">
+          <span class="term-prompt">rhod</span>
+          <span class="term-path">~/projects/rhod-term</span>
+          <span class="term-branch">git:(main)</span>
+          <span class="term-cmd">rhod --benchmarks</span>
+        </div>
+        <div class="term-output">  RAM en reposo:   58 MB   (Terminales Electron: ~470 MB, Terminales Nativas: ~87 MB)
+  Espacio en disco: 5.0 MB  (Terminales Electron: ~450 MB, Terminales Nativas: ~3.7 MB)
+  Arranque en frío: 45 ms   (Nativo en Rust • Sin overhead de Chromium)</div>
+
+        <div class="term-chips">
+          <button class="chip-btn" data-run="features">rhod features</button>
+          <button class="chip-btn" data-run="shortcuts">shortcuts</button>
+          <button class="chip-btn" data-run="download">download</button>
+          <button class="chip-btn" data-run="clear">clear</button>
+        </div>
+
+        <div class="input-row">
+          <span class="term-prompt">rhod</span>
+          <span class="term-path">~/projects/rhod-term</span>
+          <span class="term-branch">git:(main)</span>
+          <input type="text" id="cli-input" class="cli-input" placeholder="Escribe un comando (ej: help, features, clear)..." autocomplete="off" spellcheck="false">
+          <span class="cursor-blink"></span>
+        </div>
+      </div>
+
+      <!-- Barra de estado inferior idéntica a Rhod -->
+      <div class="window-footer">
+        <div class="footer-group">
+          <div class="footer-item">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span id="footer-path">~/projects/rhod-term</span>
+          </div>
+          <div class="footer-item">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+            <span>main</span>
+          </div>
+          <div class="footer-item">
+            <span>node v24.14.0</span>
+          </div>
+        </div>
+
+        <div class="footer-group">
+          <div class="footer-item">
+            <span id="mod-indicator">Atajos ⌘K</span>
+          </div>
+          <div class="footer-item">
+            <span>13.5px</span>
+          </div>
+          <div class="footer-item">
+            <span id="sessions-count">3 sesiones</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Gráficas Animadas con Iconos Lucide en Cabeceras -->
+  <section class="section" id="benchmarks">
+    <div class="section-tag">Benchmarks Comparativos</div>
+    <h2 class="section-title">El rendimiento no es un eslogan, son números.</h2>
+    <p class="section-desc">Comparativa directa con mediciones reales del sistema: Rhod frente a terminales nativas del sistema operativo y terminales modernas basadas en Electron.</p>
+
+    <div class="charts-dashboard" id="charts-box">
+      
+      <!-- Gráfica 1: Memoria RAM -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-title-area">
+            <span class="chart-title-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span>
+            <h3>Memoria RAM en Reposo</h3>
+            <span class="chart-tag-badge">Menor es mejor</span>
+          </div>
+          <span class="chart-note">Consumo medido con footprint de macOS</span>
+        </div>
+
+        <div class="chart-rows-group">
+          <!-- Rhod -->
+          <div class="chart-bar-row">
+            <div class="category-label rhod-label">
+              <span>Rhod (Rust)</span>
+              <span class="pill">Ultra Ligera</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-rhod" data-width="12.5"></div>
+            </div>
+            <div class="chart-val rhod-val">58 MB</div>
+          </div>
+
+          <!-- Terminales Nativas -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Nativas</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-native" data-width="18.5"></div>
+            </div>
+            <div class="chart-val">~87 MB</div>
+          </div>
+
+          <!-- Terminales Electron -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Electron</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-electron" data-width="100"></div>
+            </div>
+            <div class="chart-val">~470 MB</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfica 2: Espacio en Disco -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-title-area">
+            <span class="chart-title-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"></line><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><line x1="6" y1="16" x2="6.01" y2="16"></line><line x1="10" y1="16" x2="10.01" y2="16"></line></svg></span>
+            <h3>Espacio de Instalación en Disco</h3>
+            <span class="chart-tag-badge">Menor es mejor</span>
+          </div>
+          <span class="chart-note">Tamaño de la aplicación empaquetada</span>
+        </div>
+
+        <div class="chart-rows-group">
+          <!-- Rhod -->
+          <div class="chart-bar-row">
+            <div class="category-label rhod-label">
+              <span>Rhod (Rust)</span>
+              <span class="pill">5.0 MB</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-rhod" data-width="2.5"></div>
+            </div>
+            <div class="chart-val rhod-val">5.0 MB</div>
+          </div>
+
+          <!-- Terminales Nativas -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Nativas</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-native" data-width="2.0"></div>
+            </div>
+            <div class="chart-val">~3.7 MB</div>
+          </div>
+
+          <!-- Terminales Electron -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Electron</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-electron" data-width="100"></div>
+            </div>
+            <div class="chart-val">~450 MB</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfica 3: Tiempo de Arranque en Frío -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-title-area">
+            <span class="chart-title-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+            <h3>Tiempo de Arranque en Frío</h3>
+            <span class="chart-tag-badge">Menor es mejor</span>
+          </div>
+          <span class="chart-note">Desde el clic en el Dock hasta la interactividad</span>
+        </div>
+
+        <div class="chart-rows-group">
+          <!-- Rhod -->
+          <div class="chart-bar-row">
+            <div class="category-label rhod-label">
+              <span>Rhod (Rust)</span>
+              <span class="pill">Instantánea</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-rhod" data-width="5.0"></div>
+            </div>
+            <div class="chart-val rhod-val">~45 ms</div>
+          </div>
+
+          <!-- Terminales Nativas -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Nativas</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-native" data-width="6.5"></div>
+            </div>
+            <div class="chart-val">~50 ms</div>
+          </div>
+
+          <!-- Terminales Electron -->
+          <div class="chart-bar-row">
+            <div class="category-label">
+              <span>Terminales Electron</span>
+            </div>
+            <div class="chart-track">
+              <div class="chart-fill fill-electron" data-width="100"></div>
+            </div>
+            <div class="chart-val">~900 ms+</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 5. Características con Iconos SVG -->
+  <section class="section" id="caracteristicas">
+    <div class="section-tag">Filosofía de Diseño</div>
+    <h2 class="section-title">Herramientas que no estorban a tu flujo.</h2>
+    <p class="section-desc">Diseñada con superficies mate, bordes sutiles de 1px y atajos pensados para la velocidad.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        </div>
+        <h3 class="feature-title">Pestañas con PTY Independientes</h3>
+        <p class="feature-desc">Cada pestaña ejecuta su propio proceso shell en segundo plano. Si una tarea pesada compila en una, las otras responden sin demora.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+        </div>
+        <h3 class="feature-title">Contexto Git y Ruta en Tiempo Real</h3>
+        <p class="feature-desc">Rhod inspecciona automáticamente el directorio de trabajo activo (OSC 7 y PTY) y muestra tu rama de Git actual sin necesidad de configurar plugins lentos.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line></svg>
+        </div>
+        <h3 class="feature-title">Teclado Primero</h3>
+        <p class="feature-desc">Navegación completa sin ratón. Menú de comandos (<span class="mod-key">⌘</span>K), cambio veloz de sesión (<span class="mod-key">⌘</span>1..9), zoom interactivo (<span class="mod-key">⌘</span>+) y creación instantánea.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        </div>
+        <h3 class="feature-title">Multiplataforma Nativa</h3>
+        <p class="feature-desc">Compilada nativamente para chips Apple Silicon M-series en macOS, ConPTY en Windows y POSIX PTY en Linux. La misma experiencia en cualquier entorno.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Footer -->
+  <footer>
+    <div class="footer-content">
+      <a href="#" class="brand">
+        <img src="data:image/png;base64,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" alt="Rhod Logo">
+        <span>Rhod Terminal</span>
+      </a>
+
+      <div class="footer-links">
+        <a href="https://github.com/BenjaminCorona/rhod-term" target="_blank">Código Fuente</a>
+        <a href="https://github.com/BenjaminCorona/rhod-term/releases" target="_blank">Releases</a>
+        <a href="https://github.com/BenjaminCorona/rhod-term/blob/main/LICENSE" target="_blank">Licencia MIT</a>
+      </div>
+
+      <div class="footer-copy">
+        Desarrollado con Rust, Tauri v2 y React. Diseñado para la eficiencia.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 1. Detección automática y Enlace de Descarga Directa
+    (function detectPlatform() {
+      const p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+      const ua = navigator.userAgent || "";
+
+      const isMac = /Mac|iPhone|iPad|iPod/i.test(p) || /Macintosh|Mac OS X/i.test(ua);
+      const isWin = /Win/i.test(p) || /Windows/i.test(ua);
+      const isLinux = /Linux/i.test(p) || /Linux/i.test(ua);
+
+      const osIcon = document.getElementById("os-icon");
+      const btnLink = document.getElementById("main-download-btn");
+      const btnText = document.getElementById("download-btn-text");
+      const subtext = document.getElementById("os-subtext");
+      const modIndicators = document.querySelectorAll(".mod-key");
+      const footerMod = document.getElementById("mod-indicator");
+
+      const appleIconHtml = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 1.01-2.87-.96.04-2.08.64-2.73 1.4-.58.67-.99 1.74-.93 2.78 1.05.08 2.05-.56 2.65-1.31z"/></svg>';
+      const windowsIconHtml = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/></svg>';
+      const linuxIconHtml = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.001 2c-3.165 0-4.75 2.12-4.75 4.875 0 .614.07 1.238.2 1.838-1.572.825-2.673 2.584-2.673 4.542 0 1.026.315 1.99.855 2.784-.52.884-.855 1.916-.855 3.024 0 2.915 2.186 4.937 5.223 4.937h4c3.037 0 5.223-2.022 5.223-4.937 0-1.108-.335-2.14-.855-3.024.54-.794.855-1.758.855-2.784 0-1.958-1.101-3.717-2.673-4.542.13-.6.2-1.224.2-1.838 0-2.755-1.585-4.875-4.75-4.875z"/></svg>';
+
+      // URLs directas a los instaladores reales en GitHub Releases
+      const macDirect = "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_aarch64.dmg";
+      const winDirect = "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_x64-setup.exe";
+      const linuxDirect = "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.2.0/Rhod_0.2.0_amd64.deb";
+
+      if (isWin) {
+        if (osIcon) osIcon.innerHTML = windowsIconHtml;
+        if (btnText) btnText.textContent = "Descargar para Windows (.exe)";
+        if (subtext) subtext.textContent = "Descarga directa: Rhod_0.2.0_x64-setup.exe";
+        if (btnLink) btnLink.href = winDirect;
+        if (footerMod) footerMod.textContent = "Atajos Ctrl+K";
+        modIndicators.forEach(el => el.textContent = "Ctrl+");
+      } else if (isLinux && !isMac) {
+        if (osIcon) osIcon.innerHTML = linuxIconHtml;
+        if (btnText) btnText.textContent = "Descargar para Linux (.deb)";
+        if (subtext) subtext.textContent = "Descarga directa: Rhod_0.2.0_amd64.deb";
+        if (btnLink) btnLink.href = linuxDirect;
+        if (footerMod) footerMod.textContent = "Atajos Ctrl+K";
+        modIndicators.forEach(el => el.textContent = "Ctrl+");
+      } else {
+        // Default: macOS Apple Silicon
+        if (osIcon) osIcon.innerHTML = appleIconHtml;
+        if (btnText) btnText.textContent = "Descargar para macOS (.dmg)";
+        if (subtext) subtext.textContent = "Descarga directa: Rhod_0.2.0_aarch64.dmg";
+        if (btnLink) btnLink.href = macDirect;
+        if (footerMod) footerMod.textContent = "Atajos ⌘K";
+        modIndicators.forEach(el => el.textContent = "⌘");
+      }
+
+      // Consulta dinámica a la API de GitHub para que en futuras versiones siempre descargue la más nueva
+      fetch("https://api.github.com/repos/BenjaminCorona/rhod-term/releases/latest")
+        .then(res => res.json())
+        .then(data => {
+          if (!data || !data.assets) return;
+          const assets = data.assets;
+          let asset = null;
+          if (isWin) {
+            asset = assets.find(a => a.name.endsWith("-setup.exe")) || assets.find(a => a.name.endsWith(".exe"));
+          } else if (isLinux && !isMac) {
+            asset = assets.find(a => a.name.endsWith(".deb")) || assets.find(a => a.name.endsWith(".AppImage"));
+          } else {
+            asset = assets.find(a => a.name.endsWith(".dmg"));
+          }
+          if (asset && asset.browser_download_url && btnLink) {
+            btnLink.href = asset.browser_download_url;
+          }
+        })
+        .catch(() => {});
+
+      // Manejador del Modal de Plataformas
+      const modal = document.getElementById("platforms-modal");
+      const openBtn = document.getElementById("open-platforms-btn");
+      const closeBtn = document.getElementById("close-modal-btn");
+
+      if (openBtn && modal) {
+        openBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          modal.style.display = "flex";
+        });
+      }
+
+      if (closeBtn && modal) {
+        closeBtn.addEventListener("click", () => {
+          modal.style.display = "none";
+        });
+      }
+
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.style.display = "none";
+        });
+      }
+    })();
+
+    // 2. Lógica de la Terminal Interactiva Embebida
+    (function initTerminal() {
+      const input = document.getElementById("cli-input");
+      const display = document.getElementById("term-display");
+      const footerPath = document.getElementById("footer-path");
+      const chips = document.querySelectorAll(".chip-btn");
+      const tabs = document.querySelectorAll(".tab");
+
+      const commands = {
+        help: "Comandos disponibles:\n  rhod features    - Ver características destacadas\n  rhod benchmarks  - Comparativa de memoria y almacenamiento\n  shortcuts        - Resumen de atajos de teclado\n  download         - Ir a la descarga oficial\n  clear            - Limpiar pantalla",
+        features: "[features]\n  • Núcleo Rust con ConPTY (Windows) y POSIX PTY (macOS/Linux)\n  • Multi-pestañas con subprocesos aislados\n  • Detección automática de CWD y rama Git activa\n  • Menor a 60 MB de RAM en reposo",
+        benchmarks: "[benchmarks]\n  • RAM Reposo:     58 MB (Rhod) vs ~470 MB (Electron)\n  • Espacio Disco:  5.0 MB (Rhod) vs ~450 MB (Electron)\n  • Tiempo inicio:  ~45 ms (Rhod) vs ~900 ms+ (Electron)",
+        shortcuts: "[shortcuts]\n  ⌘T / Ctrl+T      Nueva pestaña\n  ⌘W / Ctrl+W      Cerrar pestaña activa\n  ⌘1..9            Cambiar a pestaña N\n  ⌘+ / ⌘-          Agrandar o reducir fuente\n  ⌘K / Ctrl+K      Paleta de atajos",
+        download: "Iniciando descarga directa del instalador para tu sistema...",
+        clear: "__CLEAR__"
+      };
+
+      function execute(cmdStr) {
+        const trimmed = cmdStr.trim().toLowerCase();
+        if (!trimmed) return;
+
+        if (trimmed === "clear") {
+          const lines = display.querySelectorAll(".term-line, .term-output");
+          lines.forEach(l => l.remove());
+          input.value = "";
+          return;
+        }
+
+        if (trimmed === "download") {
+          const mainBtn = document.getElementById("main-download-btn");
+          if (mainBtn && mainBtn.href) {
+            window.location.href = mainBtn.href;
+          } else {
+            window.open("https://github.com/BenjaminCorona/rhod-term/releases/latest", "_blank");
+          }
+        }
+
+        const line = document.createElement("div");
+        line.className = "term-line";
+        line.innerHTML = '<span class="term-prompt">rhod</span> <span class="term-path">' + footerPath.textContent + '</span> <span class="term-branch">git:(main)</span> <span class="term-cmd">' + cmdStr + '</span>';
+
+        const out = document.createElement("div");
+        out.className = "term-output";
+
+        const matchedKey = Object.keys(commands).find(k => trimmed.includes(k));
+        out.textContent = matchedKey ? commands[matchedKey] : 'rhod: comando no encontrado: ' + cmdStr + '. Escribe "help" para ver opciones.';
+
+        const inputRow = document.querySelector(".input-row");
+        display.insertBefore(line, inputRow);
+        display.insertBefore(out, inputRow);
+
+        input.value = "";
+        input.focus();
+        display.scrollTop = display.scrollHeight;
+      }
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          execute(input.value);
+        }
+      });
+
+      chips.forEach(btn => {
+        btn.addEventListener("click", () => {
+          execute(btn.dataset.run);
+        });
+      });
+
+      tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+          tabs.forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+          const name = tab.dataset.tab;
+          footerPath.textContent = "~/projects/" + name;
+        });
+      });
+    })();
+
+    // 3. Animación de las Barras de Comparación al hacer scroll
+    (function initAnimatedCharts() {
+      const fills = document.querySelectorAll(".chart-fill");
+      let animated = false;
+
+      function triggerBars() {
+        if (animated) return;
+        fills.forEach(bar => {
+          const w = bar.getAttribute("data-width");
+          bar.style.width = w + "%";
+        });
+        animated = true;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            triggerBars();
+          }
+        });
+      }, { threshold: 0.25 });
+
+      const chartsBox = document.getElementById("charts-box");
+      if (chartsBox) observer.observe(chartsBox);
+    })();
+  </script>
+</body>
+</html>
