@@ -43,7 +43,8 @@ interface ShortcutItem {
     | "interrupt"
     | "zoom-in"
     | "zoom-out"
-    | "zoom-reset";
+    | "zoom-reset"
+    | "change-font";
 }
 
 interface TabItem {
@@ -76,6 +77,34 @@ function formatDisplayPath(path: string, home: string): string {
   return p;
 }
 
+export interface FontOption {
+  id: string;
+  name: string;
+  family: string;
+  desc: string;
+}
+
+export const AVAILABLE_FONTS: FontOption[] = [
+  {
+    id: "jetbrains",
+    name: "JetBrains Mono",
+    family: "'JetBrains Mono', monospace",
+    desc: "Moderna, limpia y ultra-legible, con altura de x generosa",
+  },
+  {
+    id: "geist",
+    name: "Geist Mono",
+    family: "'Geist Mono', monospace",
+    desc: "Moderna geométrica minimalista estilo Vercel / Linear",
+  },
+  {
+    id: "system",
+    name: "Sistema",
+    family: "ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace",
+    desc: "Fuente clásica del sistema (SF Mono, Menlo, Consolas)",
+  },
+];
+
 // Componente para cada Pestaña de Terminal individual
 const TerminalPane = forwardRef<
   TerminalHandle,
@@ -84,9 +113,10 @@ const TerminalPane = forwardRef<
     active: boolean;
     cwd: string;
     fontSize: number;
+    fontFamily: string;
     onCwdChange: (path: string) => void;
   }
->(({ id, active, cwd, fontSize, onCwdChange }, ref) => {
+>(({ id, active, cwd, fontSize, fontFamily, onCwdChange }, ref) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -130,8 +160,8 @@ const TerminalPane = forwardRef<
       cursorBlink: true,
       cursorStyle: "block",
       fontSize: fontSize,
-      fontFamily:
-        "ui-monospace, 'SF Mono', Menlo, Monaco, 'JetBrains Mono', Consolas, 'Courier New', monospace",
+      fontFamily: fontFamily,
+      letterSpacing: 0,
       lineHeight: 1.35,
       scrollback: 2500,
       smoothScrollDuration: 0,
@@ -187,6 +217,7 @@ const TerminalPane = forwardRef<
           key === "w" ||
           key === "k" ||
           key === "r" ||
+          key === "f" ||
           /^[1-9]$/.test(event.key))
       ) {
         return false;
@@ -275,6 +306,19 @@ const TerminalPane = forwardRef<
       }
     });
 
+    document.fonts.ready.then(() => {
+      if (!isDisposed && fitAddon && term) {
+        try {
+          fitAddon.fit();
+          if (term.rows > 0 && term.cols > 0) {
+            invoke("resize_pty", { id, rows: term.rows, cols: term.cols }).catch(console.error);
+          }
+        } catch {
+          // Ignorar
+        }
+      }
+    });
+
     const resizeObserver = new ResizeObserver(() => {
       if (isDisposed) return;
       try {
@@ -314,10 +358,11 @@ const TerminalPane = forwardRef<
     };
   }, [id, mountCount]);
 
-  // Actualizar tamaño de fuente dinámicamente cuando cambia fontSize
+  // Actualizar tamaño y tipo de fuente dinámicamente cuando cambia fontSize o fontFamily
   useEffect(() => {
     if (termRef.current && fitRef.current) {
       termRef.current.options.fontSize = fontSize;
+      termRef.current.options.fontFamily = fontFamily;
       try {
         fitRef.current.fit();
         if (termRef.current.rows > 0 && termRef.current.cols > 0) {
@@ -331,7 +376,7 @@ const TerminalPane = forwardRef<
         // Ignorar
       }
     }
-  }, [fontSize, id]);
+  }, [fontSize, fontFamily, id]);
 
   // Cuando la pestaña pasa a ser activa, redimensionar y enfocar
   useEffect(() => {
@@ -374,6 +419,23 @@ export default function App() {
   const [tabCwds, setTabCwds] = useState<Record<string, string>>({});
 
   const [fontSize, setFontSize] = useState<number>(13.5);
+  const [fontIndex, setFontIndex] = useState<number>(() => {
+    const saved = localStorage.getItem("rhod_font_id");
+    const idx = AVAILABLE_FONTS.findIndex((f) => f.id === saved);
+    return idx >= 0 ? idx : 0;
+  });
+
+  const currentFont = AVAILABLE_FONTS[fontIndex] || AVAILABLE_FONTS[0];
+
+  const handleCycleFont = () => {
+    setFontIndex((prev) => {
+      const next = (prev + 1) % AVAILABLE_FONTS.length;
+      const font = AVAILABLE_FONTS[next];
+      localStorage.setItem("rhod_font_id", font.id);
+      showToast(`Fuente: ${font.name}`);
+      return next;
+    });
+  };
   const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
@@ -559,6 +621,14 @@ export default function App() {
         desc: "Restaura el tamaño por defecto (13.5px)",
         category: "Terminal",
         actionType: "zoom-reset",
+      },
+      {
+        id: "change-font",
+        keys: [modSymbol, "Shift", "F"],
+        label: "Cambiar tipografía",
+        desc: "Alterna entre JetBrains Mono, Geist Mono y Sistema",
+        category: "Terminal",
+        actionType: "change-font",
       },
       {
         id: "new-tab",
@@ -751,6 +821,7 @@ export default function App() {
     else if (shortcut.actionType === "zoom-in") handleZoomIn();
     else if (shortcut.actionType === "zoom-out") handleZoomOut();
     else if (shortcut.actionType === "zoom-reset") handleZoomReset();
+    else if (shortcut.actionType === "change-font") handleCycleFont();
     setPaletteOpen(false);
   };
 
@@ -829,6 +900,7 @@ export default function App() {
             active={tab.id === activeTabId}
             cwd={context.cwd}
             fontSize={fontSize}
+            fontFamily={currentFont.family}
             onCwdChange={(newPath) => handleCwdUpdate(tab.id, newPath)}
             ref={(el) => {
               tabRefs.current[tab.id] = el;
@@ -898,6 +970,16 @@ export default function App() {
             title="Versión de Rhod (clic para copiar)"
           >
             <span>v{appVersion}</span>
+          </div>
+
+          {/* Selector de fuente interactivo */}
+          <div
+            className="status-item font-family-item"
+            onClick={handleCycleFont}
+            title={`Tipografía actual: ${currentFont.name}\n${currentFont.desc}\n(Clic o ${modSymbol}+Shift+F para cambiar)`}
+          >
+            <Type size={11} />
+            <span>{currentFont.name}</span>
           </div>
 
           {/* Indicador interactivo del tamaño de fuente */}
