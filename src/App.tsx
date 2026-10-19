@@ -133,7 +133,9 @@ const TerminalPane = forwardRef<
       fontFamily:
         "ui-monospace, 'SF Mono', Menlo, Monaco, 'JetBrains Mono', Consolas, 'Courier New', monospace",
       lineHeight: 1.35,
-      scrollback: 5000,
+      scrollback: 2500,
+      smoothScrollDuration: 0,
+      allowTransparency: false,
       theme: {
         background: "#111113",
         foreground: "#d4d4d8",
@@ -927,6 +929,10 @@ export default function App() {
                 placeholder="Buscar atajo de teclado..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
               <button
                 type="button"
