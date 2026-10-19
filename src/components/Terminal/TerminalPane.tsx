@@ -5,13 +5,12 @@ import {
     useImperativeHandle,
     forwardRef,
 } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { TerminalHandle } from "../../types";
-import { XTERM_THEME } from "../../constants";
 
 interface TerminalPaneProps {
     id: string;
@@ -19,11 +18,12 @@ interface TerminalPaneProps {
     cwd: string;
     fontSize: number;
     fontFamily: string;
+    theme: ITheme;
     onCwdChange: (path: string) => void;
 }
 
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
-    ({ id, active, cwd, fontSize, fontFamily, onCwdChange }, ref) => {
+    ({ id, active, cwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
         const termRef = useRef<Terminal | null>(null);
         const fitRef = useRef<FitAddon | null>(null);
@@ -65,15 +65,15 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
             const term = new Terminal({
                 cursorBlink: true,
-                cursorStyle: "block",
+                cursorStyle: "bar",
                 fontSize: fontSize,
                 fontFamily: fontFamily,
                 letterSpacing: 0,
                 lineHeight: 1.35,
                 scrollback: 2500,
                 smoothScrollDuration: 0,
-                allowTransparency: false,
-                theme: XTERM_THEME,
+                allowTransparency: true,
+                theme: theme,
             });
 
             // Permitir atajos globales (Cmd/Ctrl + T, W, K, +, -, 0, 1..9, etc.)
@@ -200,7 +200,7 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                             }).catch(console.error);
                         }
                     } catch {
-                        // Ignorar errores transitorios de cálculo de layout
+                        // Ignorar
                     }
                 }
             });
@@ -255,6 +255,13 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 }
             }
         }, [fontSize, fontFamily, id]);
+
+        // Actualizar paleta de colores dinámicamente cuando el tema cambia
+        useEffect(() => {
+            if (termRef.current) {
+                termRef.current.options.theme = theme;
+            }
+        }, [theme]);
 
         // Cuando la pestaña pasa a ser activa, redimensionar y enfocar
         useEffect(() => {

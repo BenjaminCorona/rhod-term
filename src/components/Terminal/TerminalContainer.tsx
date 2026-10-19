@@ -1,3 +1,4 @@
+import { ITheme } from "@xterm/xterm";
 import { TabItem, TerminalHandle } from "../../types";
 import { TerminalPane } from "./TerminalPane";
 
@@ -7,6 +8,7 @@ interface TerminalContainerProps {
     cwd: string;
     fontSize: number;
     fontFamily: string;
+    theme: ITheme;
     onCwdChange: (tabId: string, path: string) => void;
     tabRefs: React.MutableRefObject<Record<string, TerminalHandle | null>>;
     onFocusActiveTab: () => void;
@@ -18,6 +20,7 @@ export function TerminalContainer({
     cwd,
     fontSize,
     fontFamily,
+    theme,
     onCwdChange,
     tabRefs,
     onFocusActiveTab,
@@ -32,6 +35,7 @@ export function TerminalContainer({
                     cwd={cwd}
                     fontSize={fontSize}
                     fontFamily={fontFamily}
+                    theme={theme}
                     onCwdChange={(newPath) => onCwdChange(tab.id, newPath)}
                     ref={(el) => {
                         tabRefs.current[tab.id] = el;

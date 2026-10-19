@@ -1,3 +1,5 @@
+import { ITheme } from "@xterm/xterm";
+
 export interface SystemContext {
     cwd: string;
     git_branch: string;
@@ -18,7 +20,8 @@ export type ShortcutActionType =
     | "zoom-in"
     | "zoom-out"
     | "zoom-reset"
-    | "change-font";
+    | "change-font"
+    | "change-theme";
 
 export type ShortcutCategory = "Todos" | "Pestañas" | "Terminal" | "Navegación";
 
@@ -51,4 +54,25 @@ export interface FontOption {
     name: string;
     family: string;
     desc: string;
+}
+
+export interface ThemeColorsUI {
+    bgCanvas: string;
+    bgSurface: string;
+    bgSurfaceElevated: string;
+    bgHover: string;
+    borderSubtle: string;
+    borderMedium: string;
+    textMain: string;
+    textSecondary: string;
+    textMuted: string;
+    accent: string;
+}
+
+export interface ThemeOption {
+    id: string;
+    name: string;
+    desc: string;
+    ui: ThemeColorsUI;
+    terminal: ITheme;
 }

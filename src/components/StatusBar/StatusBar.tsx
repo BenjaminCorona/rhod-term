@@ -1,17 +1,19 @@
-import { Folder, GitBranch, Command, Type } from "lucide-react";
-import { SystemContext, FontOption } from "../../types";
+import { Folder, GitBranch, Command, Type, Palette } from "lucide-react";
+import { SystemContext, FontOption, ThemeOption } from "../../types";
 
 interface StatusBarProps {
     context: SystemContext;
     displayPath: string;
     currentFont: FontOption;
     fontSize: number;
+    currentTheme: ThemeOption;
     sessionsCount: number;
     modSymbol: string;
     onCopyPath: () => void;
     onGitStatus: () => void;
     onOpenPalette: () => void;
     onCycleFont: () => void;
+    onCycleTheme: () => void;
     onResetZoom: () => void;
 }
 
@@ -20,12 +22,14 @@ export function StatusBar({
     displayPath,
     currentFont,
     fontSize,
+    currentTheme,
     sessionsCount,
     modSymbol,
     onCopyPath,
     onGitStatus,
     onOpenPalette,
     onCycleFont,
+    onCycleTheme,
     onResetZoom,
 }: StatusBarProps) {
     return (
@@ -61,7 +65,15 @@ export function StatusBar({
             </div>
 
             <div className="status-info">
-
+                {/* Selector de tema interactivo */}
+                <div
+                    className="status-item theme-item"
+                    onClick={onCycleTheme}
+                    title={`Tema visual: ${currentTheme.name}\n${currentTheme.desc}\n(Clic o ${modSymbol}+Shift+T para cambiar)`}
+                >
+                    <Palette size={11} />
+                    <span>{currentTheme.name}</span>
+                </div>
 
                 {/* Selector de fuente interactivo */}
                 <div

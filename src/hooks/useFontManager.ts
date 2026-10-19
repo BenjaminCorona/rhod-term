@@ -1,10 +1,23 @@
 import { useState, useCallback } from "react";
 import { AVAILABLE_FONTS, DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE } from "../constants";
 
+const STORAGE_FONT_SIZE_KEY = "rhod_font_size";
+const STORAGE_FONT_ID_KEY = "rhod_font_id";
+
 export function useFontManager(showToast: (msg: string) => void) {
-    const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
+    const [fontSize, setFontSize] = useState<number>(() => {
+        const saved = localStorage.getItem(STORAGE_FONT_SIZE_KEY);
+        if (saved) {
+            const parsed = parseFloat(saved);
+            if (!isNaN(parsed) && parsed >= MIN_FONT_SIZE && parsed <= MAX_FONT_SIZE) {
+                return parsed;
+            }
+        }
+        return DEFAULT_FONT_SIZE;
+    });
+
     const [fontIndex, setFontIndex] = useState<number>(() => {
-        const saved = localStorage.getItem("rhod_font_id");
+        const saved = localStorage.getItem(STORAGE_FONT_ID_KEY);
         const idx = AVAILABLE_FONTS.findIndex((f) => f.id === saved);
         return idx >= 0 ? idx : 0;
     });
@@ -15,7 +28,7 @@ export function useFontManager(showToast: (msg: string) => void) {
         setFontIndex((prev) => {
             const next = (prev + 1) % AVAILABLE_FONTS.length;
             const font = AVAILABLE_FONTS[next];
-            localStorage.setItem("rhod_font_id", font.id);
+            localStorage.setItem(STORAGE_FONT_ID_KEY, font.id);
             showToast(`Fuente: ${font.name}`);
             return next;
         });
@@ -24,6 +37,7 @@ export function useFontManager(showToast: (msg: string) => void) {
     const handleZoomIn = useCallback(() => {
         setFontSize((prev) => {
             const next = Math.min(prev + 1, MAX_FONT_SIZE);
+            localStorage.setItem(STORAGE_FONT_SIZE_KEY, next.toString());
             showToast(`Tamaño de fuente: ${next}px`);
             return next;
         });
@@ -32,6 +46,7 @@ export function useFontManager(showToast: (msg: string) => void) {
     const handleZoomOut = useCallback(() => {
         setFontSize((prev) => {
             const next = Math.max(prev - 1, MIN_FONT_SIZE);
+            localStorage.setItem(STORAGE_FONT_SIZE_KEY, next.toString());
             showToast(`Tamaño de fuente: ${next}px`);
             return next;
         });
@@ -39,6 +54,7 @@ export function useFontManager(showToast: (msg: string) => void) {
 
     const handleZoomReset = useCallback(() => {
         setFontSize(DEFAULT_FONT_SIZE);
+        localStorage.setItem(STORAGE_FONT_SIZE_KEY, DEFAULT_FONT_SIZE.toString());
         showToast(`Tamaño de fuente restablecido: ${DEFAULT_FONT_SIZE}px`);
     }, [showToast]);
 

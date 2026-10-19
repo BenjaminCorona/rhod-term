@@ -16,6 +16,7 @@ interface KeyboardShortcutsParams {
     onZoomOut: () => void;
     onZoomReset: () => void;
     onCycleFont: () => void;
+    onCycleTheme: () => void;
     showToast: (msg: string) => void;
 }
 
@@ -34,6 +35,7 @@ export function useKeyboardShortcuts({
     onZoomOut,
     onZoomReset,
     onCycleFont,
+    onCycleTheme,
     showToast,
 }: KeyboardShortcutsParams) {
     const handleClear = useCallback(() => {
@@ -103,6 +105,14 @@ export function useKeyboardShortcuts({
             desc: "Alterna entre JetBrains Mono, Geist Mono y Sistema",
             category: "Terminal",
             actionType: "change-font",
+        },
+        {
+            id: "change-theme",
+            keys: [modSymbol, "Shift", "T"],
+            label: "Cambiar tema",
+            desc: "Alterna entre paletas estéticas (Tokyo Night, Catppuccin, Dracula, etc.)",
+            category: "Terminal",
+            actionType: "change-theme",
         },
         {
             id: "new-tab",
@@ -218,8 +228,15 @@ export function useKeyboardShortcuts({
                 return;
             }
 
-            // Pestañas
-            if (isCmdOrCtrl && key === "t") {
+            // Cambiar tema con atajo Cmd/Ctrl + Shift + T (debe evaluarse antes de Cmd + T)
+            if (isCmdOrCtrl && e.shiftKey && key === "t") {
+                e.preventDefault();
+                onCycleTheme();
+                return;
+            }
+
+            // Pestañas (Cmd/Ctrl + T sin shift)
+            if (isCmdOrCtrl && !e.shiftKey && key === "t") {
                 e.preventDefault();
                 onAddTab();
                 return;
@@ -245,7 +262,7 @@ export function useKeyboardShortcuts({
                 return;
             }
 
-            // Cambiar fuente con atajo
+            // Cambiar fuente con atajo Cmd/Ctrl + Shift + F
             if (isCmdOrCtrl && e.shiftKey && key === "f") {
                 e.preventDefault();
                 onCycleFont();
@@ -297,6 +314,7 @@ export function useKeyboardShortcuts({
         onZoomOut,
         onZoomReset,
         onCycleFont,
+        onCycleTheme,
         onAddTab,
         onCloseTab,
         onSelectTab,

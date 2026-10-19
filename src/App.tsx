@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import {
     useToast,
     useFontManager,
+    useThemeManager,
     useSystemContext,
     useTerminalTabs,
     useKeyboardShortcuts,
@@ -54,7 +55,13 @@ export default function App() {
         handleZoomReset,
     } = useFontManager(showToast);
 
-    // 4. Manejo de estado del modal de atajos
+    // 4. Catálogo de temas visuales y paletas ANSI
+    const {
+        currentTheme,
+        handleCycleTheme,
+    } = useThemeManager(showToast);
+
+    // 5. Manejo de estado del modal de atajos
     const handleTogglePalette = useCallback(() => {
         setPaletteOpen((prev) => !prev);
     }, []);
@@ -72,7 +79,7 @@ export default function App() {
         [tabs, setActiveTabId]
     );
 
-    // 5. Catálogo y escuchador de atajos de teclado
+    // 6. Catálogo y escuchador de atajos de teclado
     const {
         shortcutsCatalog,
         handleClear,
@@ -95,10 +102,11 @@ export default function App() {
         onZoomOut: handleZoomOut,
         onZoomReset: handleZoomReset,
         onCycleFont: handleCycleFont,
+        onCycleTheme: handleCycleTheme,
         showToast,
     });
 
-    // 6. Ejecución interactiva desde el modal de atajos
+    // 7. Ejecución interactiva desde el modal de atajos
     const handleExecuteShortcut = useCallback(
         (shortcut: ShortcutItem) => {
             switch (shortcut.actionType) {
@@ -135,6 +143,9 @@ export default function App() {
                 case "change-font":
                     handleCycleFont();
                     break;
+                case "change-theme":
+                    handleCycleTheme();
+                    break;
             }
             setPaletteOpen(false);
         },
@@ -151,6 +162,7 @@ export default function App() {
             handleZoomOut,
             handleZoomReset,
             handleCycleFont,
+            handleCycleTheme,
         ]
     );
 
@@ -172,24 +184,26 @@ export default function App() {
                 }}
             />
 
-            {/* 2. Área principal de terminales */}
+            {/* 2. Área principal de terminales con tema reactivo */}
             <TerminalContainer
                 tabs={tabs}
                 activeTabId={activeTabId}
                 cwd={context.cwd}
                 fontSize={fontSize}
                 fontFamily={currentFont.family}
+                theme={currentTheme.terminal}
                 onCwdChange={handleCwdUpdate}
                 tabRefs={tabRefs}
                 onFocusActiveTab={() => tabRefs.current[activeTabId]?.focus()}
             />
 
-            {/* 3. Barra de estado inferior */}
+            {/* 3. Barra de estado inferior con controles de tema y tipografía */}
             <StatusBar
                 context={context}
                 displayPath={displayPath}
                 currentFont={currentFont}
                 fontSize={fontSize}
+                currentTheme={currentTheme}
                 sessionsCount={tabs.length}
                 modSymbol={modSymbol}
                 onCopyPath={() => {
@@ -202,6 +216,7 @@ export default function App() {
                 }}
                 onOpenPalette={handleTogglePalette}
                 onCycleFont={handleCycleFont}
+                onCycleTheme={handleCycleTheme}
                 onResetZoom={handleZoomReset}
             />
 
