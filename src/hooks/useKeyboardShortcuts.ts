@@ -10,7 +10,7 @@ interface KeyboardShortcutsParams {
     onAddTab: () => void;
     onCloseTab: (id: string) => void;
     onSelectTab: (index: number) => void;
-    onTogglePalette: () => void;
+    onTogglePalette: (tab?: "temas" | "tipografia" | "atajos") => void;
     onClosePalette: () => void;
     onZoomIn: () => void;
     onZoomOut: () => void;
@@ -75,10 +75,24 @@ export function useKeyboardShortcuts({
 
     const shortcutsCatalog: ShortcutItem[] = useMemo(() => [
         {
+            id: "open-settings",
+            keys: [modSymbol, ","],
+            label: "Configuración",
+            desc: "Abre el panel visual de temas, tipografía, zoom y atajos",
+            category: "Navegación",
+        },
+        {
+            id: "open-shortcuts",
+            keys: [modSymbol, "K"],
+            label: "Menú de atajos",
+            desc: "Abre el buscador rápido de atajos de teclado",
+            category: "Navegación",
+        },
+        {
             id: "zoom-in",
             keys: [modSymbol, "+"],
             label: "Aumentar fuente",
-            desc: "Agranda el texto de la terminal",
+            desc: "Agranda el texto de la terminal (guardado automático)",
             category: "Terminal",
             actionType: "zoom-in",
         },
@@ -110,7 +124,7 @@ export function useKeyboardShortcuts({
             id: "change-theme",
             keys: [modSymbol, "Shift", "T"],
             label: "Cambiar tema",
-            desc: "Alterna entre paletas estéticas (Tokyo Night, Catppuccin, Dracula, etc.)",
+            desc: "Alterna entre temas de color (Tokyo Night, Catppuccin, etc.)",
             category: "Terminal",
             actionType: "change-theme",
         },
@@ -136,13 +150,6 @@ export function useKeyboardShortcuts({
             label: "Cambiar de pestaña",
             desc: "Salta directamente a la pestaña correspondiente",
             category: "Pestañas",
-        },
-        {
-            id: "open-shortcuts",
-            keys: [modSymbol, "K"],
-            label: "Menú de atajos",
-            desc: "Abre o cierra esta ventana con todos los atajos",
-            category: "Navegación",
         },
         {
             id: "copy",
@@ -228,7 +235,7 @@ export function useKeyboardShortcuts({
                 return;
             }
 
-            // Cambiar tema con atajo Cmd/Ctrl + Shift + T (debe evaluarse antes de Cmd + T)
+            // Cambiar tema con atajo Cmd/Ctrl + Shift + T
             if (isCmdOrCtrl && e.shiftKey && key === "t") {
                 e.preventDefault();
                 onCycleTheme();
@@ -248,10 +255,16 @@ export function useKeyboardShortcuts({
                 return;
             }
 
-            // Menú de atajos
+            // Abrir configuración: Cmd/Ctrl + , (Abre en Temas) o Cmd/Ctrl + K (Abre en Atajos)
+            if (isCmdOrCtrl && key === ",") {
+                e.preventDefault();
+                onTogglePalette("temas");
+                return;
+            }
+
             if (isCmdOrCtrl && key === "k") {
                 e.preventDefault();
-                onTogglePalette();
+                onTogglePalette("atajos");
                 return;
             }
 

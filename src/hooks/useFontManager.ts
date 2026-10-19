@@ -34,6 +34,22 @@ export function useFontManager(showToast: (msg: string) => void) {
         });
     }, [showToast]);
 
+    const handleSelectFont = useCallback((fontId: string) => {
+        const idx = AVAILABLE_FONTS.findIndex((f) => f.id === fontId);
+        if (idx >= 0) {
+            setFontIndex(idx);
+            const font = AVAILABLE_FONTS[idx];
+            localStorage.setItem(STORAGE_FONT_ID_KEY, font.id);
+            showToast(`Fuente: ${font.name}`);
+        }
+    }, [showToast]);
+
+    const handleSetFontSize = useCallback((size: number) => {
+        const clamped = Math.min(Math.max(size, MIN_FONT_SIZE), MAX_FONT_SIZE);
+        setFontSize(clamped);
+        localStorage.setItem(STORAGE_FONT_SIZE_KEY, clamped.toString());
+    }, []);
+
     const handleZoomIn = useCallback(() => {
         setFontSize((prev) => {
             const next = Math.min(prev + 1, MAX_FONT_SIZE);
@@ -55,13 +71,19 @@ export function useFontManager(showToast: (msg: string) => void) {
     const handleZoomReset = useCallback(() => {
         setFontSize(DEFAULT_FONT_SIZE);
         localStorage.setItem(STORAGE_FONT_SIZE_KEY, DEFAULT_FONT_SIZE.toString());
-        showToast(`Tamaño de fuente restablecido: ${DEFAULT_FONT_SIZE}px`);
+        showToast(`Tamaño restablecido: ${DEFAULT_FONT_SIZE}px`);
     }, [showToast]);
 
     return {
         fontSize,
         currentFont,
+        availableFonts: AVAILABLE_FONTS,
+        minFontSize: MIN_FONT_SIZE,
+        maxFontSize: MAX_FONT_SIZE,
+        defaultFontSize: DEFAULT_FONT_SIZE,
         handleCycleFont,
+        handleSelectFont,
+        handleSetFontSize,
         handleZoomIn,
         handleZoomOut,
         handleZoomReset,

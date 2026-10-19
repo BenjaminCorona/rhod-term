@@ -1,4 +1,4 @@
-import { Folder, GitBranch, Command, Type, Palette } from "lucide-react";
+import { Folder, GitBranch, Type, Palette, SlidersHorizontal } from "lucide-react";
 import { SystemContext, FontOption, ThemeOption } from "../../types";
 
 interface StatusBarProps {
@@ -11,10 +11,7 @@ interface StatusBarProps {
     modSymbol: string;
     onCopyPath: () => void;
     onGitStatus: () => void;
-    onOpenPalette: () => void;
-    onCycleFont: () => void;
-    onCycleTheme: () => void;
-    onResetZoom: () => void;
+    onOpenSettings: (tab?: "temas" | "tipografia" | "atajos") => void;
 }
 
 export function StatusBar({
@@ -27,10 +24,7 @@ export function StatusBar({
     modSymbol,
     onCopyPath,
     onGitStatus,
-    onOpenPalette,
-    onCycleFont,
-    onCycleTheme,
-    onResetZoom,
+    onOpenSettings,
 }: StatusBarProps) {
     return (
         <footer className="app-statusbar">
@@ -65,31 +59,31 @@ export function StatusBar({
             </div>
 
             <div className="status-info">
-                {/* Selector de tema interactivo */}
+                {/* Indicador de Tema: clic abre configuración en Temas */}
                 <div
                     className="status-item theme-item"
-                    onClick={onCycleTheme}
-                    title={`Tema visual: ${currentTheme.name}\n${currentTheme.desc}\n(Clic o ${modSymbol}+Shift+T para cambiar)`}
+                    onClick={() => onOpenSettings("temas")}
+                    title={`Tema actual: ${currentTheme.name}\n${currentTheme.desc}\n(Clic para abrir configuración de temas)`}
                 >
                     <Palette size={11} />
                     <span>{currentTheme.name}</span>
                 </div>
 
-                {/* Selector de fuente interactivo */}
+                {/* Indicador de Fuente: clic abre configuración en Tipografía */}
                 <div
                     className="status-item font-family-item"
-                    onClick={onCycleFont}
-                    title={`Tipografía actual: ${currentFont.name}\n${currentFont.desc}\n(Clic o ${modSymbol}+Shift+F para cambiar)`}
+                    onClick={() => onOpenSettings("tipografia")}
+                    title={`Tipografía actual: ${currentFont.name}\n${currentFont.desc}\n(Clic para configurar tipografía y zoom)`}
                 >
                     <Type size={11} />
                     <span>{currentFont.name}</span>
                 </div>
 
-                {/* Indicador interactivo del tamaño de fuente */}
+                {/* Indicador de Tamaño de Fuente */}
                 <div
                     className="status-item font-size-item"
-                    onClick={onResetZoom}
-                    title={`Tamaño de fuente (${modSymbol}+ agrandar, ${modSymbol}- achicar, clic restablecer)`}
+                    onClick={() => onOpenSettings("tipografia")}
+                    title={`Tamaño de fuente: ${fontSize}px\n(Clic para ajustar zoom)`}
                 >
                     <Type size={11} />
                     <span>{fontSize}px</span>
@@ -103,13 +97,13 @@ export function StatusBar({
                 <div className="header-actions">
                     <button
                         type="button"
-                        className="btn-action btn-palette"
-                        onClick={onOpenPalette}
-                        title={`Ver atajos de teclado (${modSymbol}K)`}
+                        className="btn-action btn-settings"
+                        onClick={() => onOpenSettings("atajos")}
+                        title={`Configuración y atajos (${modSymbol}, o ${modSymbol}K)`}
                     >
-                        <Command size={13} />
-                        <span>Atajos</span>
-                        <kbd>{modSymbol}K</kbd>
+                        <SlidersHorizontal size={12} />
+                        <span>Configuración</span>
+                        <kbd>{modSymbol},</kbd>
                     </button>
                 </div>
             </div>

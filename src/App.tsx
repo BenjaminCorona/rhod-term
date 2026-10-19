@@ -11,15 +11,17 @@ import {
     Header,
     TerminalContainer,
     StatusBar,
-    ShortcutsModal,
+    SettingsModal,
     Toast,
 } from "./components";
 import { ShortcutItem } from "./types";
+import { SettingsTab } from "./components/SettingsModal/SettingsModal";
 import "./App.css";
 
 export default function App() {
     const { toastMessage, showToast } = useToast();
-    const [paletteOpen, setPaletteOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("temas");
 
     // 1. Gestión de pestañas y rutas CWD
     const {
@@ -45,29 +47,38 @@ export default function App() {
         refreshContext,
     } = useSystemContext(activeTabId, tabCwds[activeTabId]);
 
-    // 3. Tipografía y zoom
+    // 3. Tipografía y zoom con persistencia en localStorage
     const {
         fontSize,
         currentFont,
+        availableFonts,
+        minFontSize,
+        maxFontSize,
+        defaultFontSize,
         handleCycleFont,
+        handleSelectFont,
+        handleSetFontSize,
         handleZoomIn,
         handleZoomOut,
         handleZoomReset,
     } = useFontManager(showToast);
 
-    // 4. Catálogo de temas visuales y paletas ANSI
+    // 4. Catálogo de temas visuales y paletas ANSI con persistencia en localStorage
     const {
         currentTheme,
+        availableThemes,
         handleCycleTheme,
+        handleSelectTheme,
     } = useThemeManager(showToast);
 
-    // 5. Manejo de estado del modal de atajos
-    const handleTogglePalette = useCallback(() => {
-        setPaletteOpen((prev) => !prev);
+    // 5. Apertura y control del Modal de Configuración
+    const handleOpenSettings = useCallback((tab: SettingsTab = "temas") => {
+        setSettingsInitialTab(tab);
+        setSettingsOpen(true);
     }, []);
 
-    const handleClosePalette = useCallback(() => {
-        setPaletteOpen(false);
+    const handleCloseSettings = useCallback(() => {
+        setSettingsOpen(false);
     }, []);
 
     const handleSelectTabByIndex = useCallback(
@@ -96,8 +107,8 @@ export default function App() {
         onAddTab: handleAddTab,
         onCloseTab: (id) => handleCloseTab(id),
         onSelectTab: handleSelectTabByIndex,
-        onTogglePalette: handleTogglePalette,
-        onClosePalette: handleClosePalette,
+        onTogglePalette: (tab) => handleOpenSettings(tab || "atajos"),
+        onClosePalette: handleCloseSettings,
         onZoomIn: handleZoomIn,
         onZoomOut: handleZoomOut,
         onZoomReset: handleZoomReset,
@@ -147,7 +158,7 @@ export default function App() {
                     handleCycleTheme();
                     break;
             }
-            setPaletteOpen(false);
+            setSettingsOpen(false);
         },
         [
             activeTabId,
@@ -197,7 +208,7 @@ export default function App() {
                 onFocusActiveTab={() => tabRefs.current[activeTabId]?.focus()}
             />
 
-            {/* 3. Barra de estado inferior con controles de tema y tipografía */}
+            {/* 3. Barra de estado inferior conectada a Configuración */}
             <StatusBar
                 context={context}
                 displayPath={displayPath}
@@ -214,19 +225,30 @@ export default function App() {
                     tabRefs.current[activeTabId]?.executeCommand("git status");
                     showToast("git status");
                 }}
-                onOpenPalette={handleTogglePalette}
-                onCycleFont={handleCycleFont}
-                onCycleTheme={handleCycleTheme}
-                onResetZoom={handleZoomReset}
+                onOpenSettings={handleOpenSettings}
             />
 
-            {/* 4. Modal de atajos de teclado */}
-            <ShortcutsModal
-                isOpen={paletteOpen}
+            {/* 4. Modal unificado de Configuración (Temas, Tipografía & Zoom, Atajos) */}
+            <SettingsModal
+                isOpen={settingsOpen}
+                initialTab={settingsInitialTab}
                 appVersion={appVersion}
+                modSymbol={modSymbol}
+                currentTheme={currentTheme}
+                availableThemes={availableThemes}
+                onSelectTheme={handleSelectTheme}
+                currentFont={currentFont}
+                availableFonts={availableFonts}
+                fontSize={fontSize}
+                minFontSize={minFontSize}
+                maxFontSize={maxFontSize}
+                defaultFontSize={defaultFontSize}
+                onSelectFont={handleSelectFont}
+                onSetFontSize={handleSetFontSize}
+                onResetZoom={handleZoomReset}
                 shortcutsCatalog={shortcutsCatalog}
-                onClose={handleClosePalette}
                 onExecuteShortcut={handleExecuteShortcut}
+                onClose={handleCloseSettings}
             />
 
             {/* 5. Notificación Toast */}

@@ -5,4 +5,5 @@ export * from "./Terminal/TerminalPane";
 export * from "./Terminal/TerminalContainer";
 export * from "./StatusBar/StatusBar";
 export * from "./ShortcutsModal/ShortcutsModal";
+export * from "./SettingsModal/SettingsModal";
 export * from "./Toast/Toast";
