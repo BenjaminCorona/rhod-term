@@ -2,10 +2,16 @@ use crate::error::AppError;
 use crate::state::AppState;
 use tauri::{AppHandle, State};
 
-/// Controlador IPC para iniciar una sesión de terminal PTY
+/// Controlador IPC para iniciar una sesión de terminal PTY con dimensiones iniciales
 #[tauri::command]
-pub fn start_pty(id: String, app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
-    state.pty_manager.start_session(&id, app)
+pub fn start_pty(
+    id: String,
+    cols: Option<u16>,
+    rows: Option<u16>,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    state.pty_manager.start_session(&id, cols, rows, app)
 }
 
 /// Controlador IPC para enviar datos a una terminal activa

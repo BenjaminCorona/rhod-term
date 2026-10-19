@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import "@xterm/xterm/css/xterm.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -62,6 +63,20 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
             let isDisposed = false;
             let unlistenOutput: (() => void) | null = null;
+            let writeBuffer = "";
+            let rafId: number | null = null;
+
+            // Flujo de salida batcheado: agrupa micro-chunks de streaming para evitar desalineación de ANSI
+            const flushBuffer = () => {
+                if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                if (writeBuffer && termRef.current && !isDisposed) {
+                    termRef.current.write(writeBuffer);
+                    writeBuffer = "";
+                }
+            };
 
             const term = new Terminal({
                 cursorBlink: true,
@@ -69,48 +84,43 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 fontSize: fontSize,
                 fontFamily: fontFamily,
                 letterSpacing: 0,
-                lineHeight: 1.35,
-                scrollback: 2500,
+                lineHeight: 1.15,
+                scrollback: 5000,
                 smoothScrollDuration: 0,
                 allowTransparency: true,
+                allowProposedApi: true,
                 theme: theme,
             });
 
-            // Permitir atajos globales (Cmd/Ctrl + T, W, K, +, -, 0, 1..9, etc.)
-            term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-                const isCmdOrCtrl = event.metaKey || event.ctrlKey;
-                const key = event.key.toLowerCase();
+            let unicode11Addon: Unicode11Addon | null = null;
+            try {
+                unicode11Addon = new Unicode11Addon();
+                term.loadAddon(unicode11Addon);
+                term.unicode.activeVersion = "11";
+            } catch (err) {
+                console.warn("[xterm] No se pudo activar Unicode11Addon:", err);
+            }
 
-                // Permitir Ctrl+Shift+C (copiar) y Ctrl+Shift+V (pegar) en Windows/Linux
-                if (isCmdOrCtrl && event.shiftKey && (key === "c" || key === "v")) {
-                    return false;
-                }
+            // Permitir atajos globales (Cmd/Ctrl + T, W, K, +, -, 0, etc.)
+            term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+                const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+                const key = e.key.toLowerCase();
 
-                // Permitir Cmd+C / Cmd+V en macOS
-                if (event.metaKey && (key === "c" || key === "v")) {
-                    return false;
-                }
-
-                if (
-                    isCmdOrCtrl &&
-                    (event.key === "+" ||
-                        event.key === "=" ||
-                        event.key === "-" ||
-                        event.key === "_" ||
-                        event.key === "0" ||
-                        key === "t" ||
-                        key === "w" ||
-                        key === "k" ||
-                        key === "r" ||
-                        key === "f" ||
-                        /^[1-9]$/.test(event.key))
-                ) {
-                    return false;
+                if (isCmdOrCtrl) {
+                    if (["t", "w", "k", "r", ",", "+", "-", "=", "_", "0"].includes(key)) {
+                        return false;
+                    }
+                    if (e.shiftKey && ["t", "f", "c", "v"].includes(key)) {
+                        return false;
+                    }
+                    if (/^[1-9]$/.test(e.key)) {
+                        return false;
+                    }
                 }
                 return true;
             });
 
-            // Manejador OSC 7 cross-platform para actualizar la ruta del shell en tiempo real
+            // Parser OSC 7 para tracking de CWD
             const osc7Disposable = term.parser.registerOscHandler(7, (data) => {
                 try {
                     let path = data;
@@ -140,28 +150,65 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
             termRef.current = term;
             fitRef.current = fitAddon;
 
-            listen<string>(`pty-output-${id}`, (event) => {
-                if (!isDisposed) {
-                    term.write(event.payload);
+            // Función centralizada para recalcular columnas/filas y sincronizarlas de inmediato con el PTY
+            const syncDimensions = () => {
+                if (isDisposed || !mountRef.current || !fitRef.current || !termRef.current) return;
+                try {
+                    fitRef.current.fit();
+                    const cols = termRef.current.cols;
+                    const rows = termRef.current.rows;
+                    if (cols > 0 && rows > 0) {
+                        invoke("resize_pty", { id, rows, cols }).catch(console.error);
+                    }
+                } catch {
+                    // Ignorar si el contenedor aún no tiene dimensiones válidas
                 }
-            })
+            };
+
+            // Intentar ajuste inicial
+            try {
+                fitAddon.fit();
+            } catch {
+                // Ignorar
+            }
+
+            // Sincronización nativa de dimensiones xterm -> PTY
+            const onResizeDisposable = term.onResize(({ cols, rows }) => {
+                if (!isDisposed && cols > 0 && rows > 0) {
+                    invoke("resize_pty", { id, rows, cols }).catch(console.error);
+                }
+            });
+
+            // Escuchar salida del PTY con promesa segura para evitar listeners zombies
+            const unlistenPromise = listen<string>(`pty-output-${id}`, (event) => {
+                if (!isDisposed) {
+                    writeBuffer += event.payload;
+                    if (writeBuffer.length > 32768) {
+                        flushBuffer();
+                    } else if (rafId === null) {
+                        rafId = requestAnimationFrame(flushBuffer);
+                    }
+                }
+            });
+
+            unlistenPromise
                 .then((fn) => {
-                    if (isDisposed) fn();
-                    else unlistenOutput = fn;
+                    if (isDisposed) {
+                        fn();
+                    } else {
+                        unlistenOutput = fn;
+                    }
                 })
                 .catch(console.error);
 
-            invoke("start_pty", { id })
+            // Iniciar PTY con dimensiones calculadas desde el inicio
+            const initialCols = term.cols > 0 ? term.cols : 80;
+            const initialRows = term.rows > 0 ? term.rows : 24;
+
+            invoke("start_pty", { id, cols: initialCols, rows: initialRows })
                 .then(() => {
                     if (isDisposed) return;
-                    fitAddon.fit();
-                    if (term.rows > 0 && term.cols > 0) {
-                        invoke("resize_pty", {
-                            id,
-                            rows: term.rows,
-                            cols: term.cols,
-                        }).catch(console.error);
-                    }
+                    syncDimensions();
                     if (active) {
                         term.focus();
                     }
@@ -188,47 +235,53 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                     .catch(() => {});
             });
 
+            // Observador de cambio de tamaño del contenedor
             const resizeObserver = new ResizeObserver(() => {
                 if (!isDisposed && mountRef.current && mountRef.current.clientHeight > 0) {
-                    try {
-                        fitAddon.fit();
-                        if (term.rows > 0 && term.cols > 0) {
-                            invoke("resize_pty", {
-                                id,
-                                rows: term.rows,
-                                cols: term.cols,
-                            }).catch(console.error);
-                        }
-                    } catch {
-                        // Ignorar
-                    }
+                    syncDimensions();
                 }
             });
 
             resizeObserver.observe(mountRef.current);
 
-            const timer = setTimeout(() => {
+            // Escuchar resize de ventana
+            window.addEventListener("resize", syncDimensions);
+
+            // Asegurar que las fuentes web cargadas recalculen las métricas sin distorsionar columnas
+            document.fonts.ready.then(() => {
                 if (!isDisposed) {
-                    try {
-                        fitAddon.fit();
-                        invoke("resize_pty", {
-                            id,
-                            rows: term.rows,
-                            cols: term.cols,
-                        }).catch(console.error);
-                    } catch {
-                        // Ignorar
-                    }
+                    syncDimensions();
                 }
-            }, 100);
+            });
+
+            // Timers escalonados para atrapar el renderizado y estabilización del layout en WebKit
+            const t1 = setTimeout(syncDimensions, 40);
+            const t2 = setTimeout(syncDimensions, 120);
+            const t3 = setTimeout(syncDimensions, 300);
 
             return () => {
                 isDisposed = true;
-                clearTimeout(timer);
+                if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                clearTimeout(t1);
+                clearTimeout(t2);
+                clearTimeout(t3);
+                window.removeEventListener("resize", syncDimensions);
                 resizeObserver.disconnect();
+                onResizeDisposable.dispose();
                 onDataDisposable.dispose();
                 osc7Disposable.dispose();
-                if (unlistenOutput) unlistenOutput();
+                if (unicode11Addon) unicode11Addon.dispose();
+
+                if (unlistenOutput) {
+                    unlistenOutput();
+                    unlistenOutput = null;
+                } else {
+                    unlistenPromise.then((fn) => fn()).catch(() => {});
+                }
+
                 invoke("close_pty", { id }).catch(console.error);
                 term.dispose();
                 termRef.current = null;
@@ -243,12 +296,10 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 termRef.current.options.fontFamily = fontFamily;
                 try {
                     fitRef.current.fit();
-                    if (termRef.current.rows > 0 && termRef.current.cols > 0) {
-                        invoke("resize_pty", {
-                            id,
-                            rows: termRef.current.rows,
-                            cols: termRef.current.cols,
-                        }).catch(console.error);
+                    const cols = termRef.current.cols;
+                    const rows = termRef.current.rows;
+                    if (cols > 0 && rows > 0) {
+                        invoke("resize_pty", { id, rows, cols }).catch(console.error);
                     }
                 } catch {
                     // Ignorar
@@ -266,25 +317,20 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
         // Cuando la pestaña pasa a ser activa, redimensionar y enfocar
         useEffect(() => {
             if (active && termRef.current && fitRef.current) {
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     try {
                         fitRef.current?.fit();
-                        if (
-                            termRef.current &&
-                            termRef.current.rows > 0 &&
-                            termRef.current.cols > 0
-                        ) {
-                            invoke("resize_pty", {
-                                id,
-                                rows: termRef.current.rows,
-                                cols: termRef.current.cols,
-                            }).catch(console.error);
+                        const cols = termRef.current?.cols ?? 0;
+                        const rows = termRef.current?.rows ?? 0;
+                        if (cols > 0 && rows > 0) {
+                            invoke("resize_pty", { id, rows, cols }).catch(console.error);
                         }
                         termRef.current?.focus();
                     } catch {
                         // Ignorar
                     }
-                }, 30);
+                }, 20);
+                return () => clearTimeout(timer);
             }
         }, [active, id]);
 

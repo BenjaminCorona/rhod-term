@@ -407,13 +407,15 @@ body,
   position: absolute;
   top: 0;
   left: 0;
-  padding: 6px 12px 2px 12px;
+  padding: 0;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
 .xterm {
   height: 100%;
-  padding: 0;
+  box-sizing: border-box;
+  padding: 4px 8px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
