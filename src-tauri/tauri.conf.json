@@ -36,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGQTdGRDY4QjM3QUU5QjEKUldTeDZYcXphUDJudjBxUXRZY3dIcThpUkZhWHFpVEpENS9sODVLWndwOHk4enpsLzQxbThpODcK",
+      "endpoints": [
+        "https://github.com/BenjaminCorona/rhod-term/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

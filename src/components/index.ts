@@ -6,4 +6,5 @@ export * from "./Terminal/TerminalContainer";
 export * from "./StatusBar/StatusBar";
 export * from "./ShortcutsModal/ShortcutsModal";
 export * from "./SettingsModal/SettingsModal";
+export * from "./UpdateBanner/UpdateBanner";
 export * from "./Toast/Toast";

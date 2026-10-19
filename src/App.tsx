@@ -6,12 +6,14 @@ import {
     useSystemContext,
     useTerminalTabs,
     useKeyboardShortcuts,
+    useAppUpdater,
 } from "./hooks";
 import {
     Header,
     TerminalContainer,
     StatusBar,
     SettingsModal,
+    UpdateBanner,
     Toast,
 } from "./components";
 import { ShortcutItem } from "./types";
@@ -71,7 +73,17 @@ export default function App() {
         handleSelectTheme,
     } = useThemeManager(showToast);
 
-    // 5. Apertura y control del Modal de Configuración
+    // 5. Sistema de actualizaciones automáticas
+    const {
+        status: updateStatus,
+        newVersion,
+        downloadProgress,
+        checkForUpdates,
+        downloadAndApplyUpdate,
+        dismissUpdate,
+    } = useAppUpdater(showToast);
+
+    // 6. Apertura y control del Modal de Configuración
     const handleOpenSettings = useCallback((tab: SettingsTab = "temas") => {
         setSettingsInitialTab(tab);
         setSettingsOpen(true);
@@ -90,7 +102,7 @@ export default function App() {
         [tabs, setActiveTabId]
     );
 
-    // 6. Catálogo y escuchador de atajos de teclado
+    // 7. Catálogo y escuchador de atajos de teclado
     const {
         shortcutsCatalog,
         handleClear,
@@ -117,7 +129,7 @@ export default function App() {
         showToast,
     });
 
-    // 7. Ejecución interactiva desde el modal de atajos
+    // 8. Ejecución interactiva desde el modal de atajos
     const handleExecuteShortcut = useCallback(
         (shortcut: ShortcutItem) => {
             switch (shortcut.actionType) {
@@ -228,7 +240,7 @@ export default function App() {
                 onOpenSettings={handleOpenSettings}
             />
 
-            {/* 4. Modal unificado de Configuración (Temas, Tipografía & Zoom, Atajos) */}
+            {/* 4. Modal unificado de Configuración (Temas, Tipografía & Zoom, Atajos, Actualizaciones) */}
             <SettingsModal
                 isOpen={settingsOpen}
                 initialTab={settingsInitialTab}
@@ -248,10 +260,23 @@ export default function App() {
                 onResetZoom={handleZoomReset}
                 shortcutsCatalog={shortcutsCatalog}
                 onExecuteShortcut={handleExecuteShortcut}
+                updateStatus={updateStatus}
+                newVersion={newVersion}
+                onCheckForUpdates={() => checkForUpdates(true)}
+                onApplyUpdate={downloadAndApplyUpdate}
                 onClose={handleCloseSettings}
             />
 
-            {/* 5. Notificación Toast */}
+            {/* 5. Banner de actualización automática discreto */}
+            <UpdateBanner
+                status={updateStatus}
+                newVersion={newVersion}
+                downloadProgress={downloadProgress}
+                onApplyUpdate={downloadAndApplyUpdate}
+                onDismiss={dismissUpdate}
+            />
+
+            {/* 6. Notificación Toast */}
             <Toast message={toastMessage} />
         </div>
     );

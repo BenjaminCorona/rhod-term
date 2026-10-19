@@ -4,3 +4,4 @@ export * from "./useThemeManager";
 export * from "./useSystemContext";
 export * from "./useTerminalTabs";
 export * from "./useKeyboardShortcuts";
+export * from "./useAppUpdater";

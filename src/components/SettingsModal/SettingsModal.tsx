@@ -12,6 +12,8 @@ import {
     SlidersHorizontal,
 } from "lucide-react";
 import { ShortcutItem, FontOption, ThemeOption } from "../../types";
+import { UpdateStatus } from "../../hooks";
+import { Loader2, Sparkles } from "lucide-react";
 import { CATEGORIES } from "../../constants";
 
 export type SettingsTab = "temas" | "tipografia" | "atajos";
@@ -38,6 +40,11 @@ interface SettingsModalProps {
     // Atajos
     shortcutsCatalog: ShortcutItem[];
     onExecuteShortcut: (shortcut: ShortcutItem) => void;
+    // Actualizaciones
+    updateStatus?: UpdateStatus;
+    newVersion?: string | null;
+    onCheckForUpdates?: () => void;
+    onApplyUpdate?: () => void;
     // Control
     onClose: () => void;
 }
@@ -61,6 +68,10 @@ export function SettingsModal({
     onResetZoom,
     shortcutsCatalog,
     onExecuteShortcut,
+    updateStatus = "idle",
+    newVersion = null,
+    onCheckForUpdates,
+    onApplyUpdate,
     onClose,
 }: SettingsModalProps) {
     const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
@@ -475,9 +486,43 @@ export function SettingsModal({
 
                 {/* Footer del Modal */}
                 <div className="settings-footer-bar">
-                    <span className="footer-persist-note">
-                        Los cambios se guardan automáticamente en tu equipo
-                    </span>
+                    <div className="footer-left-group">
+                        <span className="footer-persist-note">
+                            Los cambios se guardan automáticamente en tu equipo
+                        </span>
+                        <div className="footer-update-check">
+                            {updateStatus === "checking" && (
+                                <span className="update-check-status">
+                                    <Loader2 size={11} className="update-spinner" /> Comprobando...
+                                </span>
+                            )}
+                            {updateStatus === "available" && onApplyUpdate && (
+                                <button
+                                    type="button"
+                                    className="btn-update-footer"
+                                    onClick={onApplyUpdate}
+                                >
+                                    <Sparkles size={11} />
+                                    <span>Actualizar a v{newVersion}</span>
+                                </button>
+                            )}
+                            {updateStatus === "up-to-date" && (
+                                <span className="update-check-status">
+                                    <Check size={11} /> Al día
+                                </span>
+                            )}
+                            {(updateStatus === "idle" || updateStatus === "error") && onCheckForUpdates && (
+                                <button
+                                    type="button"
+                                    className="btn-check-updates"
+                                    onClick={onCheckForUpdates}
+                                    title="Comprobar si hay una versión más reciente de Rhod"
+                                >
+                                    Buscar actualizaciones
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     <div className="footer-keys-hint">
                         <span>Cerrar</span>
                         <kbd>ESC</kbd>
