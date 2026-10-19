@@ -61,6 +61,7 @@ jobs:
           tagName: v__VERSION__
           releaseName: 'Rhod v__VERSION__'
           releaseBody: 'Consola Rhod minimalista y ultra liviana para macOS, Windows y Linux.'
+          includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
