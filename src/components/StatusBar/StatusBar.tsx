@@ -4,7 +4,6 @@ import { SystemContext, FontOption } from "../../types";
 interface StatusBarProps {
     context: SystemContext;
     displayPath: string;
-    appVersion: string;
     currentFont: FontOption;
     fontSize: number;
     sessionsCount: number;
@@ -12,7 +11,6 @@ interface StatusBarProps {
     onCopyPath: () => void;
     onGitStatus: () => void;
     onOpenPalette: () => void;
-    onCopyVersion: () => void;
     onCycleFont: () => void;
     onResetZoom: () => void;
 }
@@ -20,7 +18,6 @@ interface StatusBarProps {
 export function StatusBar({
     context,
     displayPath,
-    appVersion,
     currentFont,
     fontSize,
     sessionsCount,
@@ -28,7 +25,6 @@ export function StatusBar({
     onCopyPath,
     onGitStatus,
     onOpenPalette,
-    onCopyVersion,
     onCycleFont,
     onResetZoom,
 }: StatusBarProps) {
@@ -62,29 +58,10 @@ export function StatusBar({
                 <div className="status-item" title="Shell activo">
                     <span>{context.shell}</span>
                 </div>
-
-                <div className="header-actions">
-                    <button
-                        type="button"
-                        className="btn-action btn-palette"
-                        onClick={onOpenPalette}
-                        title={`Ver atajos de teclado (${modSymbol}K)`}
-                    >
-                        <Command size={13} />
-                        <span>Atajos</span>
-                        <kbd>{modSymbol}K</kbd>
-                    </button>
-                </div>
             </div>
 
             <div className="status-info">
-                <div
-                    className="status-item version-badge"
-                    onClick={onCopyVersion}
-                    title="Versión de Rhod (clic para copiar)"
-                >
-                    <span>v{appVersion}</span>
-                </div>
+
 
                 {/* Selector de fuente interactivo */}
                 <div
@@ -107,9 +84,22 @@ export function StatusBar({
                 </div>
 
                 <span>
-                    {sessionsCount} {sessionsCount === 1 ? "sesión" : "sesiones"}
+                    {sessionsCount}{" "}
+                    {sessionsCount === 1 ? "sesión" : "sesiones"}
                 </span>
                 <span className="status-dot" />
+                <div className="header-actions">
+                    <button
+                        type="button"
+                        className="btn-action btn-palette"
+                        onClick={onOpenPalette}
+                        title={`Ver atajos de teclado (${modSymbol}K)`}
+                    >
+                        <Command size={13} />
+                        <span>Atajos</span>
+                        <kbd>{modSymbol}K</kbd>
+                    </button>
+                </div>
             </div>
         </footer>
     );

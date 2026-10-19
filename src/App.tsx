@@ -187,7 +187,6 @@ export default function App() {
             <StatusBar
                 context={context}
                 displayPath={displayPath}
-                appVersion={appVersion}
                 currentFont={currentFont}
                 fontSize={fontSize}
                 sessionsCount={tabs.length}
@@ -201,10 +200,6 @@ export default function App() {
                     showToast("git status");
                 }}
                 onOpenPalette={handleTogglePalette}
-                onCopyVersion={() => {
-                    navigator.clipboard.writeText(`v${appVersion}`);
-                    showToast(`Versión v${appVersion} copiada`);
-                }}
                 onCycleFont={handleCycleFont}
                 onResetZoom={handleZoomReset}
             />
