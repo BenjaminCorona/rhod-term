@@ -54,7 +54,25 @@ export default function App() {
         handleZoomReset,
     } = useFontManager(showToast);
 
-    // 4. Catálogo y escuchador de atajos de teclado
+    // 4. Manejo de estado del modal de atajos
+    const handleTogglePalette = useCallback(() => {
+        setPaletteOpen((prev) => !prev);
+    }, []);
+
+    const handleClosePalette = useCallback(() => {
+        setPaletteOpen(false);
+    }, []);
+
+    const handleSelectTabByIndex = useCallback(
+        (index: number) => {
+            if (tabs[index]) {
+                setActiveTabId(tabs[index].id);
+            }
+        },
+        [tabs, setActiveTabId]
+    );
+
+    // 5. Catálogo y escuchador de atajos de teclado
     const {
         shortcutsCatalog,
         handleClear,
@@ -70,9 +88,9 @@ export default function App() {
         tabRefs,
         onAddTab: handleAddTab,
         onCloseTab: (id) => handleCloseTab(id),
-        onSelectTab: (idx) => setActiveTabId(tabs[idx].id),
-        onTogglePalette: () => setPaletteOpen((prev) => !prev),
-        onClosePalette: () => setPaletteOpen(false),
+        onSelectTab: handleSelectTabByIndex,
+        onTogglePalette: handleTogglePalette,
+        onClosePalette: handleClosePalette,
         onZoomIn: handleZoomIn,
         onZoomOut: handleZoomOut,
         onZoomReset: handleZoomReset,
@@ -80,7 +98,7 @@ export default function App() {
         showToast,
     });
 
-    // 5. Ejecución interactiva desde el modal de atajos
+    // 6. Ejecución interactiva desde el modal de atajos
     const handleExecuteShortcut = useCallback(
         (shortcut: ShortcutItem) => {
             switch (shortcut.actionType) {
@@ -182,7 +200,7 @@ export default function App() {
                     tabRefs.current[activeTabId]?.executeCommand("git status");
                     showToast("git status");
                 }}
-                onOpenPalette={() => setPaletteOpen(true)}
+                onOpenPalette={handleTogglePalette}
                 onCopyVersion={() => {
                     navigator.clipboard.writeText(`v${appVersion}`);
                     showToast(`Versión v${appVersion} copiada`);
@@ -196,7 +214,7 @@ export default function App() {
                 isOpen={paletteOpen}
                 appVersion={appVersion}
                 shortcutsCatalog={shortcutsCatalog}
-                onClose={() => setPaletteOpen(false)}
+                onClose={handleClosePalette}
                 onExecuteShortcut={handleExecuteShortcut}
             />
 

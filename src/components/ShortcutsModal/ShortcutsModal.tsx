@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { ShortcutItem } from "../../types";
 import { CATEGORIES } from "../../constants";
@@ -20,6 +20,17 @@ export function ShortcutsModal({
 }: ShortcutsModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("Todos");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Autoenfoque inmediato y restablecer búsqueda
+            setTimeout(() => inputRef.current?.focus(), 20);
+        } else {
+            setSearchQuery("");
+            setActiveCategory("Todos");
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -42,12 +53,19 @@ export function ShortcutsModal({
                 <div className="modal-input-row">
                     <Search size={15} className="input-icon" />
                     <input
+                        ref={inputRef}
                         type="text"
                         autoFocus
                         className="command-input"
                         placeholder="Buscar atajo de teclado..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                                e.stopPropagation();
+                                onClose();
+                            }
+                        }}
                         autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="off"
@@ -76,17 +94,22 @@ export function ShortcutsModal({
                         filteredShortcuts.map((item) => (
                             <div
                                 key={item.id}
-                                className="shortcut-row"
+                                className="list-row"
                                 onClick={() => onExecuteShortcut(item)}
+                                title={
+                                    item.actionType
+                                        ? "Haz clic para ejecutar esta acción"
+                                        : undefined
+                                }
                             >
-                                <div className="row-content">
-                                    <span className="row-label">{item.label}</span>
+                                <div className="row-left">
+                                    <span className="row-cmd">{item.label}</span>
                                     <span className="row-desc">{item.desc}</span>
                                 </div>
                                 <div className="row-right">
-                                    <div className="keys-group">
+                                    <div className="shortcut-keys">
                                         {item.keys.map((k, i) => (
-                                            <span key={i} className="key-wrap">
+                                            <span key={i} className="key-wrapper">
                                                 <kbd>{k}</kbd>
                                                 {i < item.keys.length - 1 && (
                                                     <span className="key-sep">+</span>
