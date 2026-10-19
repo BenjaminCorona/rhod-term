@@ -1368,7 +1368,6 @@ body,
   left: 16px;
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-medium);
-  border-left: 3px solid var(--accent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
   border-radius: 8px;
   padding: 8px 12px;

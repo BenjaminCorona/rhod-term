@@ -1,4 +1,4 @@
-import { Sparkles, Download, X, Loader2 } from "lucide-react";
+import { Download, X, Loader2 } from "lucide-react";
 import { UpdateStatus } from "../../hooks";
 
 interface UpdateBannerProps {
@@ -23,10 +23,8 @@ export function UpdateBanner({
     return (
         <aside className="update-banner" aria-live="polite">
             <div className="update-banner-left">
-                {status === "downloading" ? (
+                {status === "downloading" && (
                     <Loader2 size={14} className="update-spinner" />
-                ) : (
-                    <Sparkles size={14} className="update-sparkle-icon" />
                 )}
 
                 <div className="update-banner-texts">
