@@ -102,6 +102,28 @@ body,
   padding: 0 12px;
   flex-shrink: 0;
   z-index: 10;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+/* Elementos interactivos dentro del header no deben iniciar arrastre de ventana */
+.tab-item,
+.btn-new-tab,
+.header-version,
+.window-controls,
+.window-control-btn {
+  -webkit-app-region: no-drag;
+}
+
+/* En macOS: espacio de 72px a la izquierda para el semáforo nativo de Apple */
+.platform-macos .tabs-container {
+  padding-left: 72px;
+}
+
+/* En Windows y Linux: pestañas pegadas a la izquierda */
+.platform-windows .tabs-container,
+.platform-linux .tabs-container {
+  padding-left: 0;
 }
 
 .tabs-container {
@@ -698,4 +720,42 @@ body,
   color: var(--text-main);
   background: var(--bg-hover);
   border-color: rgba(255, 255, 255, 0.18);
+}
+
+
+/* ============================================================
+   CONTROLES DE VENTANA (WINDOWS Y LINUX)
+   ============================================================ */
+.window-controls {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  margin-left: 6px;
+  margin-right: -12px;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* Botón cerrar estilo Windows 11 / 10: fondo rojo al hacer hover */
+.window-control-btn.btn-close-win:hover {
+  background-color: #e81123 !important;
+  color: #ffffff !important;
 }

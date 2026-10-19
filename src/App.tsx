@@ -155,13 +155,14 @@ export default function App() {
     );
 
     return (
-        <div className="app-layout">
+        <div className={`app-layout platform-${context.os}`}>
             {/* 1. Header con pestañas y botón nueva pestaña */}
             <Header
                 tabs={tabs}
                 activeTabId={activeTabId}
                 appVersion={appVersion}
                 modSymbol={modSymbol}
+                isMac={isMac}
                 onSelectTab={setActiveTabId}
                 onCloseTab={handleCloseTab}
                 onAddTab={handleAddTab}

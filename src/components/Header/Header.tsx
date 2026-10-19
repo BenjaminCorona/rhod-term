@@ -1,12 +1,14 @@
 import { Plus } from "lucide-react";
 import { TabItem as TabItemType } from "../../types";
 import { TabItem } from "./TabItem";
+import { WindowControls } from "./WindowControls";
 
 interface HeaderProps {
     tabs: TabItemType[];
     activeTabId: string;
     appVersion: string;
     modSymbol: string;
+    isMac: boolean;
     onSelectTab: (id: string) => void;
     onCloseTab: (id: string, e: React.MouseEvent) => void;
     onAddTab: () => void;
@@ -18,14 +20,15 @@ export function Header({
     activeTabId,
     appVersion,
     modSymbol,
+    isMac,
     onSelectTab,
     onCloseTab,
     onAddTab,
     onCopyVersion,
 }: HeaderProps) {
     return (
-        <header className="app-header">
-            <div className="tabs-container">
+        <header className="app-header" data-tauri-drag-region>
+            <div className="tabs-container" data-tauri-drag-region>
                 {tabs.map((tab, idx) => (
                     <TabItem
                         key={tab.id}
@@ -48,7 +51,7 @@ export function Header({
                 </button>
             </div>
 
-            <div className="header-right">
+            <div className="header-right" data-tauri-drag-region>
                 <span
                     className="header-version"
                     onClick={onCopyVersion}
@@ -56,6 +59,9 @@ export function Header({
                 >
                     v{appVersion}
                 </span>
+
+                {/* En Windows y Linux se renderizan los controles de ventana integrados a la derecha */}
+                {!isMac && <WindowControls />}
             </div>
         </header>
     );
