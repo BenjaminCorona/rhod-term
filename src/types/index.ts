@@ -37,6 +37,7 @@ export interface ShortcutItem {
 export interface TabItem {
     id: string;
     title: string;
+    cwd?: string;
 }
 
 export interface TerminalHandle {

@@ -8,10 +8,11 @@ pub fn start_pty(
     id: String,
     cols: Option<u16>,
     rows: Option<u16>,
+    cwd: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    state.pty_manager.start_session(&id, cols, rows, app)
+    state.pty_manager.start_session(&id, cols, rows, cwd, app)
 }
 
 /// Controlador IPC para enviar datos a una terminal activa

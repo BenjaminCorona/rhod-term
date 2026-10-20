@@ -9,7 +9,6 @@ import {
     Keyboard,
     Minus,
     Plus,
-    SlidersHorizontal,
 } from "lucide-react";
 import { ShortcutItem, FontOption, ThemeOption } from "../../types";
 import { UpdateStatus } from "../../hooks";
@@ -120,9 +119,6 @@ export function SettingsModal({
                 {/* Header de Configuración con Selector de Pestañas */}
                 <div className="settings-header">
                     <div className="settings-title-group">
-                        <div className="settings-icon-badge">
-                            <SlidersHorizontal size={14} />
-                        </div>
                         <div className="settings-title-text">
                             <span className="settings-title">Configuración</span>
                             <span className="settings-version">v{appVersion}</span>

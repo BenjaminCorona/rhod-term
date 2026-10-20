@@ -17,6 +17,7 @@ interface TerminalPaneProps {
     id: string;
     active: boolean;
     cwd: string;
+    initialCwd?: string;
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
@@ -24,7 +25,7 @@ interface TerminalPaneProps {
 }
 
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
-    ({ id, active, cwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
+    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
         const termRef = useRef<Terminal | null>(null);
         const fitRef = useRef<FitAddon | null>(null);
@@ -205,7 +206,12 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
             const initialCols = term.cols > 0 ? term.cols : 80;
             const initialRows = term.rows > 0 ? term.rows : 24;
 
-            invoke("start_pty", { id, cols: initialCols, rows: initialRows })
+            invoke("start_pty", {
+                id,
+                cols: initialCols,
+                rows: initialRows,
+                cwd: initialCwd || undefined,
+            })
                 .then(() => {
                     if (isDisposed) return;
                     syncDimensions();

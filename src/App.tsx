@@ -212,6 +212,7 @@ export default function App() {
                 tabs={tabs}
                 activeTabId={activeTabId}
                 cwd={context.cwd}
+                tabCwds={tabCwds}
                 fontSize={fontSize}
                 fontFamily={currentFont.family}
                 theme={currentTheme.terminal}

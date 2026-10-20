@@ -28,6 +28,7 @@ impl PtyManager {
         id: &str,
         cols: Option<u16>,
         rows: Option<u16>,
+        cwd: Option<String>,
         app: AppHandle,
     ) -> Result<(), AppError> {
         let pty_system = NativePtySystem::default();
@@ -53,6 +54,13 @@ impl PtyManager {
 
         let shell = Self::resolve_shell();
         let mut cmd = CommandBuilder::new(&shell);
+
+        if let Some(ref dir) = cwd {
+            let path = std::path::Path::new(dir);
+            if path.is_dir() {
+                cmd.cwd(path);
+            }
+        }
 
         ensure_shell_assets_extracted();
         setup_shell_integration(&mut cmd, &shell);

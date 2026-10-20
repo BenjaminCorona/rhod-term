@@ -6,6 +6,7 @@ interface TerminalContainerProps {
     tabs: TabItem[];
     activeTabId: string;
     cwd: string;
+    tabCwds?: Record<string, string>;
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
@@ -18,6 +19,7 @@ export function TerminalContainer({
     tabs,
     activeTabId,
     cwd,
+    tabCwds,
     fontSize,
     fontFamily,
     theme,
@@ -33,6 +35,7 @@ export function TerminalContainer({
                     id={tab.id}
                     active={tab.id === activeTabId}
                     cwd={cwd}
+                    initialCwd={tab.cwd || (tabCwds && tabCwds[tab.id]) || undefined}
                     fontSize={fontSize}
                     fontFamily={fontFamily}
                     theme={theme}
