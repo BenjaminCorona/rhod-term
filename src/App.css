@@ -178,10 +178,10 @@ body,
 }
 
 /* ============================================================
-   1. HEADER MINIMALISTA
+   1. HEADER MINIMALISTA & CHROME REFRESH TABS
    ============================================================ */
 .app-header {
-  height: 38px;
+  height: 40px;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -192,6 +192,7 @@ body,
   z-index: 10;
   -webkit-app-region: drag;
   user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
 }
 
 /* Elementos interactivos dentro del header no deben iniciar arrastre de ventana */
@@ -203,9 +204,9 @@ body,
   -webkit-app-region: no-drag;
 }
 
-/* En macOS: espacio de 72px a la izquierda para el semáforo nativo de Apple */
+/* En macOS: espacio de 78px a la izquierda para el semáforo nativo de Apple */
 .platform-macos .tabs-container {
-  padding-left: 72px;
+  padding-left: 78px;
 }
 
 /* En Windows y Linux: pestañas pegadas a la izquierda */
@@ -220,91 +221,144 @@ body,
   gap: 3px;
   overflow-x: auto;
   max-width: 100%;
+  padding: 4px 0;
 }
 
 .tabs-container::-webkit-scrollbar {
   display: none;
 }
 
+/* Pestaña estilo Chrome Material You (cápsula redondeada) */
 .tab-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 5px;
-  font-size: 11.5px;
+  gap: 7px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+}
+
+/* Divisor sutil estilo Chrome entre pestañas inactivas consecutivas */
+.tab-item:not(.active):not(:hover) + .tab-item:not(.active):not(:hover)::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
 }
 
 .tab-item:hover {
-  background: var(--bg-hover);
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-main);
 }
 
+/* Pestaña activa (Cápsula Chrome: acento azul profundo con borde nítido) */
 .tab-item.active {
-  background: var(--bg-surface-elevated);
-  border-color: var(--border-subtle);
-  color: var(--text-main);
+  background: rgba(14, 50, 88, 0.72);
+  border: 1px solid rgba(59, 130, 246, 0.38);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
 }
 
 .tab-icon {
   color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .tab-item.active .tab-icon {
-  color: var(--text-main);
+  color: #60a5fa;
+  opacity: 1;
 }
 
 .tab-name {
   font-weight: 500;
-  letter-spacing: 0.1px;
+  letter-spacing: -0.01em;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.tab-shortcut-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  letter-spacing: 0.2px;
+  transition: opacity 0.12s ease;
+}
+
+.tab-item.active .tab-shortcut-badge {
+  color: rgba(147, 197, 253, 0.65);
+}
+
+/* Botón de cerrar pestaña estilo Chrome (círculo al hacer hover) */
 .tab-close-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  padding: 2px;
-  border-radius: 3px;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0.5;
-  transition: all 0.15s ease;
+  opacity: 0.45;
+  transition: all 0.12s ease;
   margin-left: 2px;
+  flex-shrink: 0;
 }
 
 .tab-close-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.16);
   opacity: 1;
 }
 
+.tab-item.active .tab-close-btn {
+  opacity: 0.75;
+}
+
+.tab-item.active .tab-close-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  opacity: 1;
+}
+
+/* Botón + Nueva pestaña estilo Chrome */
 .btn-new-tab {
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--text-muted);
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .btn-new-tab:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
-  border-color: var(--border-subtle);
 }
 
 .header-actions {
@@ -452,7 +506,8 @@ body,
   padding: 0 12px;
   font-size: 11px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
   flex-shrink: 0;
   z-index: 10;
 }

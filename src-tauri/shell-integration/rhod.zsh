@@ -48,20 +48,21 @@ if [[ -f "$_rhod_dir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; th
   ZSH_HIGHLIGHT_STYLES[redirection]="fg=magenta"
 fi
 
-# 3. Prompt elegante con colores nativos si el usuario no tiene tema personalizado
-if [[ "$PROMPT" == "%m%#" || "$PROMPT" == "%n@%m %1~ %# " || "$PROMPT" == "" || "$PROMPT" == "%# " ]]; then
-  setopt PROMPT_SUBST
-  autoload -Uz vcs_info 2>/dev/null
-  zstyle ':vcs_info:*' enable git 2>/dev/null
-  zstyle ':vcs_info:git:*' formats ' %F{magenta}git:(%b)%f' 2>/dev/null
+# 3. Prompt moderno estilo Warp / Starship (sin ruido de usuario@máquina)
+setopt PROMPT_SUBST
+autoload -Uz vcs_info 2>/dev/null
+zstyle ':vcs_info:*' enable git 2>/dev/null
+zstyle ':vcs_info:git:*' formats ' %F{244}git:(%F{213}%b%F{244})%f' 2>/dev/null
 
-  _rhod_precmd() {
-    vcs_info 2>/dev/null
-  }
-  autoload -Uz add-zsh-hook 2>/dev/null
-  if (( $+functions[add-zsh-hook] )); then
-    add-zsh-hook precmd _rhod_precmd
-  fi
+_rhod_precmd() {
+  vcs_info 2>/dev/null
+}
+autoload -Uz add-zsh-hook 2>/dev/null
+if (( $+functions[add-zsh-hook] )); then
+  add-zsh-hook precmd _rhod_precmd
+fi
 
-  PROMPT='%F{cyan}%n%f@%F{242}%m%f %F{blue}%1~%f${vcs_info_msg_0_} %F{green}❯%f '
+# Formato limpio y espacioso: ruta en cian + rama git en magenta + chevron vibrante
+if [[ -z "$_RHOD_CUSTOM_PROMPT" ]]; then
+  PROMPT='%F{39}%1~%f${vcs_info_msg_0_} %F{119}❯%f '
 fi

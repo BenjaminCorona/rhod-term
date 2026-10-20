@@ -18,6 +18,8 @@ export function TabItem({
     onSelect,
     onClose,
 }: TabItemProps) {
+    const isNumbered = index < 9;
+
     return (
         <div
             className={`tab-item ${isActive ? "active" : ""}`}
@@ -26,11 +28,15 @@ export function TabItem({
         >
             <TerminalIcon size={12} className="tab-icon" />
             <span className="tab-name">{tab.title}</span>
+            {isNumbered && (
+                <span className="tab-shortcut-badge">{modSymbol}{index + 1}</span>
+            )}
             <button
                 type="button"
                 className="tab-close-btn"
                 onClick={onClose}
                 title={`Cerrar pestaña (${modSymbol}W)`}
+                aria-label="Cerrar pestaña"
             >
                 <X size={11} />
             </button>
