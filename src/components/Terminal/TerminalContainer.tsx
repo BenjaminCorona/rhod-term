@@ -10,6 +10,7 @@ interface TerminalContainerProps {
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
+    vibrancyEnabled?: boolean;
     onCwdChange: (tabId: string, path: string) => void;
     tabRefs: React.MutableRefObject<Record<string, TerminalHandle | null>>;
     onFocusActiveTab: () => void;
@@ -23,6 +24,7 @@ export function TerminalContainer({
     fontSize,
     fontFamily,
     theme,
+    vibrancyEnabled = true,
     onCwdChange,
     tabRefs,
     onFocusActiveTab,
@@ -39,6 +41,7 @@ export function TerminalContainer({
                     fontSize={fontSize}
                     fontFamily={fontFamily}
                     theme={theme}
+                    vibrancyEnabled={vibrancyEnabled}
                     onCwdChange={(newPath) => onCwdChange(tab.id, newPath)}
                     ref={(el) => {
                         tabRefs.current[tab.id] = el;

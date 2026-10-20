@@ -21,11 +21,12 @@ interface TerminalPaneProps {
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
+    vibrancyEnabled?: boolean;
     onCwdChange: (path: string) => void;
 }
 
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
-    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
+    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, vibrancyEnabled = true, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
         const termRef = useRef<Terminal | null>(null);
         const fitRef = useRef<FitAddon | null>(null);
@@ -90,7 +91,7 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 smoothScrollDuration: 0,
                 allowTransparency: true,
                 allowProposedApi: true,
-                theme: theme,
+                theme: { ...theme, background: vibrancyEnabled ? "transparent" : (theme.background || "#111113") },
             });
 
             let unicode11Addon: Unicode11Addon | null = null;
@@ -316,9 +317,9 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
         // Actualizar paleta de colores dinámicamente cuando el tema cambia
         useEffect(() => {
             if (termRef.current) {
-                termRef.current.options.theme = theme;
+                termRef.current.options.theme = { ...theme, background: vibrancyEnabled ? "transparent" : (theme.background || "#111113") };
             }
-        }, [theme]);
+        }, [theme, vibrancyEnabled]);
 
         // Cuando la pestaña pasa a ser activa, redimensionar y enfocar
         useEffect(() => {

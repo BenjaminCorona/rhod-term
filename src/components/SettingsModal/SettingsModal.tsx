@@ -26,6 +26,8 @@ interface SettingsModalProps {
     currentTheme: ThemeOption;
     availableThemes: ThemeOption[];
     onSelectTheme: (id: string) => void;
+    vibrancyEnabled: boolean;
+    onToggleVibrancy: () => void;
     // Tipografía y Zoom
     currentFont: FontOption;
     availableFonts: FontOption[];
@@ -56,6 +58,8 @@ export function SettingsModal({
     currentTheme,
     availableThemes,
     onSelectTheme,
+    vibrancyEnabled = true,
+    onToggleVibrancy,
     currentFont,
     availableFonts,
     fontSize,
@@ -172,6 +176,38 @@ export function SettingsModal({
                                 <p>
                                     Selecciona el tema de tu preferencia. Cambia instantáneamente la ventana, pestañas y la paleta ANSI de 16 colores del shell.
                                 </p>
+                            </div>
+
+                                                        {/* Control de Vibrancy / Cristal traslúcido */}
+                            <div className="vibrancy-toggle-card">
+                                <div className="vibrancy-toggle-left">
+                                    <div className="vibrancy-toggle-title-row">
+                                        <Sparkles size={14} className="vibrancy-icon" />
+                                        <span className="vibrancy-toggle-title">
+                                            Efecto de cristal traslúcido (Vibrancy)
+                                        </span>
+                                        <span
+                                            className={`vibrancy-status-badge ${vibrancyEnabled ? "active" : ""}`}
+                                        >
+                                            {vibrancyEnabled ? "Activado" : "Desactivado"}
+                                        </span>
+                                    </div>
+                                    <p className="vibrancy-toggle-desc">
+                                        Aplica el desenfoque de fondo nativo de macOS (estilo Warp / frosted glass). Si lo desactivas, la terminal utiliza un fondo sólido mate.
+                                    </p>
+                                </div>
+                                <div className="vibrancy-toggle-right">
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={vibrancyEnabled}
+                                        aria-label="Activar o desactivar efecto de cristal"
+                                        className={`rhod-switch ${vibrancyEnabled ? "checked" : ""}`}
+                                        onClick={onToggleVibrancy}
+                                    >
+                                        <span className="switch-thumb" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="themes-grid">

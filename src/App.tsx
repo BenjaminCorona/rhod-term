@@ -7,6 +7,7 @@ import {
     useTerminalTabs,
     useKeyboardShortcuts,
     useAppUpdater,
+    useVibrancyManager,
 } from "./hooks";
 import {
     Header,
@@ -72,6 +73,12 @@ export default function App() {
         handleCycleTheme,
         handleSelectTheme,
     } = useThemeManager(showToast);
+
+    // 4.5. Efecto de translucidez nativo (Vibrancy) con persistencia en localStorage
+    const {
+        vibrancyEnabled,
+        handleToggleVibrancy,
+    } = useVibrancyManager(showToast);
 
     // 5. Sistema de actualizaciones automáticas
     const {
@@ -190,7 +197,8 @@ export default function App() {
     );
 
     return (
-        <div className={`app-layout platform-${context.os}`}>
+        <div className={`app-layout platform-${context.os} ${vibrancyEnabled ? "vibrancy-enabled" : "vibrancy-disabled"}`}>
+
             {/* 1. Header con pestañas y botón nueva pestaña */}
             <Header
                 tabs={tabs}
@@ -216,6 +224,7 @@ export default function App() {
                 fontSize={fontSize}
                 fontFamily={currentFont.family}
                 theme={currentTheme.terminal}
+                vibrancyEnabled={vibrancyEnabled}
                 onCwdChange={handleCwdUpdate}
                 tabRefs={tabRefs}
                 onFocusActiveTab={() => tabRefs.current[activeTabId]?.focus()}
@@ -250,6 +259,8 @@ export default function App() {
                 currentTheme={currentTheme}
                 availableThemes={availableThemes}
                 onSelectTheme={handleSelectTheme}
+                vibrancyEnabled={vibrancyEnabled}
+                onToggleVibrancy={handleToggleVibrancy}
                 currentFont={currentFont}
                 availableFonts={availableFonts}
                 fontSize={fontSize}

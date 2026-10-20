@@ -162,19 +162,69 @@ body,
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: var(--bg-canvas);
+  background-color: transparent !important;
   color: var(--text-main);
   user-select: none;
 }
 
-/* Layout completo */
+/* Layout completo con soporte de cristal y translucidez */
 .app-layout {
   display: flex;
   flex-direction: column;
   width: 100vw;
   height: 100vh;
-  background-color: var(--bg-canvas);
   position: relative;
+  transition: background-color 0.2s ease;
+}
+
+/* Modo Cristal Traslúcido Activado (macOS Vibrancy) */
+.app-layout.vibrancy-enabled {
+  background-color: rgba(16, 17, 22, 0.58) !important;
+}
+
+.app-layout.vibrancy-enabled .app-header {
+  background-color: rgba(22, 22, 25, 0.70);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-layout.vibrancy-enabled .status-bar {
+  background-color: rgba(20, 20, 23, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-layout.vibrancy-enabled .terminal-container,
+.app-layout.vibrancy-enabled .terminal-pane,
+.app-layout.vibrancy-enabled .xterm,
+.app-layout.vibrancy-enabled .xterm .xterm-viewport,
+.app-layout.vibrancy-enabled .xterm .xterm-screen {
+  background-color: transparent !important;
+}
+
+/* Modo Fondo Sólido Mate (Vibrancy Desactivado) */
+.app-layout.vibrancy-disabled {
+  background-color: var(--bg-canvas) !important;
+}
+
+.app-layout.vibrancy-disabled .app-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.app-layout.vibrancy-disabled .status-bar {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.app-layout.vibrancy-disabled .terminal-container,
+.app-layout.vibrancy-disabled .terminal-pane,
+.app-layout.vibrancy-disabled .xterm,
+.app-layout.vibrancy-disabled .xterm .xterm-viewport,
+.app-layout.vibrancy-disabled .xterm .xterm-screen {
+  background-color: var(--bg-canvas) !important;
 }
 
 /* ============================================================
@@ -451,7 +501,7 @@ body,
   flex: 1;
   width: 100%;
   position: relative;
-  background-color: var(--bg-canvas);
+  background-color: transparent !important;
   overflow: hidden;
 }
 
@@ -464,6 +514,7 @@ body,
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
+  background-color: transparent !important;
 }
 
 .xterm {
@@ -476,8 +527,10 @@ body,
   font-feature-settings: "calt" 1, "liga" 1;
 }
 
-.xterm .xterm-viewport {
-  background-color: var(--bg-canvas) !important;
+.xterm,
+.xterm .xterm-viewport,
+.xterm .xterm-screen {
+  background-color: transparent !important;
 }
 
 .xterm-viewport::-webkit-scrollbar {
@@ -1070,6 +1123,113 @@ body,
   color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
+}
+
+
+/* Card de configuración para Vibrancy / Cristal traslúcido */
+.vibrancy-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.vibrancy-toggle-card:hover {
+  border-color: var(--border-medium);
+  background-color: var(--bg-surface-elevated);
+}
+
+.vibrancy-toggle-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vibrancy-toggle-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vibrancy-icon {
+  color: #38bdf8;
+}
+
+.vibrancy-toggle-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.vibrancy-status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.2s ease;
+}
+
+.vibrancy-status-badge.active {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.vibrancy-toggle-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+  max-width: 480px;
+}
+
+/* Switch interactivo tipo macOS / iOS */
+.rhod-switch {
+  width: 44px;
+  height: 24px;
+  background-color: var(--border-medium);
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  cursor: pointer;
+  padding: 2px;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.rhod-switch:focus-visible {
+  box-shadow: 0 0 0 2px #38bdf8;
+}
+
+.rhod-switch.checked {
+  background-color: #0284c7;
+  border-color: #38bdf8;
+}
+
+.switch-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(0);
+}
+
+.rhod-switch.checked .switch-thumb {
+  transform: translateX(20px);
 }
 
 /* Grilla de Temas */
