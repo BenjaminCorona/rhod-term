@@ -6,6 +6,9 @@ interface TabItemProps {
     index: number;
     isActive: boolean;
     modSymbol: string;
+    isDragging?: boolean;
+    style?: React.CSSProperties;
+    onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
     onSelect: () => void;
     onClose: (e: React.MouseEvent) => void;
 }
@@ -15,6 +18,9 @@ export function TabItem({
     index,
     isActive,
     modSymbol,
+    isDragging = false,
+    style,
+    onPointerDown,
     onSelect,
     onClose,
 }: TabItemProps) {
@@ -22,7 +28,11 @@ export function TabItem({
 
     return (
         <div
-            className={`tab-item ${isActive ? "active" : ""}`}
+            className={`tab-item ${isActive ? "active" : ""} ${isDragging ? "is-dragging" : ""}`}
+            style={style}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onPointerDown={onPointerDown}
             onClick={onSelect}
             title={`Pestaña ${index + 1} (${modSymbol}${index + 1})`}
         >
@@ -34,7 +44,11 @@ export function TabItem({
             <button
                 type="button"
                 className="tab-close-btn"
-                onClick={onClose}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose(e);
+                }}
                 title={`Cerrar pestaña (${modSymbol}W)`}
                 aria-label="Cerrar pestaña"
             >

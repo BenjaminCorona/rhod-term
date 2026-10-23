@@ -228,7 +228,27 @@ body,
   display: none;
 }
 
-/* Pestaña estilo Chrome Material You (cápsula redondeada) */
+
+/* Desactivar cualquier selección o resaltado de texto en el header y pestañas */
+.tabs-container,
+.tabs-container *,
+.tab-item,
+.tab-item * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+body.dragging-tabs,
+body.dragging-tabs * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+/* Pestaña estilo Chrome Material You (cápsula redondeada) con soporte de arrastre fluido */
 .tab-item {
   position: relative;
   display: flex;
@@ -240,12 +260,38 @@ body,
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
-  cursor: pointer;
+  cursor: grab;
   background: transparent;
   border: 1px solid transparent;
-  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s ease, border-color 0.12s ease;
   white-space: nowrap;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  user-select: none;
+  touch-action: none;
+}
+
+.tab-item:active {
+  cursor: grabbing;
+}
+
+/* Pestaña en estado de arrastre activo (elevada con sombra profunda estilo Apple) */
+.tab-item.is-dragging {
+  cursor: grabbing !important;
+  z-index: 50 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  opacity: 0.98 !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  background: rgba(14, 50, 88, 0.92) !important;
+}
+
+/* Contenedor durante arrastre: animación fluida para las pestañas que se desplazan abriendo espacio */
+.tabs-container.has-dragging .tab-item:not(.is-dragging) {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Ocultar divisores durante arrastre para evitar artefactos visuales */
+.tabs-container.has-dragging .tab-item::before {
+  opacity: 0 !important;
 }
 
 /* Divisor sutil estilo Chrome entre pestañas inactivas consecutivas */

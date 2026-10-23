@@ -147,6 +147,17 @@ export function useTerminalTabs(
         [onTabCwdChange]
     );
 
+    const handleReorderTabs = useCallback((fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+        setTabs((prev) => {
+            if (fromIndex >= prev.length || toIndex >= prev.length) return prev;
+            const updated = [...prev];
+            const [movedItem] = updated.splice(fromIndex, 1);
+            updated.splice(toIndex, 0, movedItem);
+            return updated;
+        });
+    }, []);
+
     return {
         tabs,
         activeTabId,
@@ -156,5 +167,6 @@ export function useTerminalTabs(
         handleAddTab,
         handleCloseTab,
         handleCwdUpdate,
+        handleReorderTabs,
     };
 }
