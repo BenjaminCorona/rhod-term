@@ -2996,7 +2996,7 @@ dependencies = [
 
 [[package]]
 name = "rhod"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "portable-pty",
  "serde",
