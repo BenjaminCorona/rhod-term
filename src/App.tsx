@@ -36,6 +36,7 @@ export default function App() {
         handleCloseTab,
         handleCwdUpdate,
         handleReorderTabs,
+        handleSetTabColor,
     } = useTerminalTabs(showToast, (_tabId, cleanPath) => {
         refreshContext(cleanPath);
     });
@@ -203,6 +204,7 @@ export default function App() {
                 onCloseTab={handleCloseTab}
                 onAddTab={handleAddTab}
                 onReorderTabs={handleReorderTabs}
+                onSetTabColor={handleSetTabColor}
                 onCopyVersion={() => {
                     navigator.clipboard.writeText(`v${appVersion}`);
                     showToast(`Versión v${appVersion} copiada`);

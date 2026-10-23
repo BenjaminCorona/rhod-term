@@ -22,7 +22,12 @@ function getInitialSession(): SavedSession {
                     (t: any) => t && typeof t.id === "string" && typeof t.title === "string"
                 )
             ) {
-                const tabs: TabItem[] = parsed.tabs;
+                const tabs: TabItem[] = parsed.tabs.map((t: any) => ({
+                    id: t.id,
+                    title: t.title,
+                    cwd: t.cwd,
+                    color: typeof t.color === "string" ? t.color : undefined,
+                }));
                 const tabCwds: Record<string, string> =
                     parsed.tabCwds && typeof parsed.tabCwds === "object" ? parsed.tabCwds : {};
 
@@ -64,6 +69,7 @@ export function useTerminalTabs(
                         id: t.id,
                         title: t.title,
                         cwd: tabCwds[t.id] || t.cwd,
+                        color: t.color,
                     })),
                     activeTabId,
                     tabCwds,
@@ -158,6 +164,12 @@ export function useTerminalTabs(
         });
     }, []);
 
+    const handleSetTabColor = useCallback((tabId: string, color?: string) => {
+        setTabs((prev) =>
+            prev.map((t) => (t.id === tabId ? { ...t, color } : t))
+        );
+    }, []);
+
     return {
         tabs,
         activeTabId,
@@ -168,5 +180,6 @@ export function useTerminalTabs(
         handleCloseTab,
         handleCwdUpdate,
         handleReorderTabs,
+        handleSetTabColor,
     };
 }

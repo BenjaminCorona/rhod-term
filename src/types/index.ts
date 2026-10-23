@@ -38,6 +38,7 @@ export interface TabItem {
     id: string;
     title: string;
     cwd?: string;
+    color?: string;
 }
 
 export interface TerminalHandle {

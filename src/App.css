@@ -1644,3 +1644,299 @@ body.dragging-tabs * {
   align-items: center;
   gap: 4px;
 }
+
+/* Pestañas con color personalizado */
+.tab-color-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--tab-custom-glow);
+  margin-left: -2px;
+  margin-right: 2px;
+}
+
+.tab-item.has-custom-color.active {
+  background: var(--tab-custom-bg) !important;
+  border-color: var(--tab-custom-border) !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.tab-item.has-custom-color.active .tab-icon {
+  color: var(--tab-custom-color) !important;
+  opacity: 1 !important;
+}
+
+.tab-item.has-custom-color:not(.active):hover {
+  background: var(--tab-custom-bg) !important;
+  border-color: var(--tab-custom-border) !important;
+}
+
+.tab-item.has-custom-color.is-dragging {
+  border-color: var(--tab-custom-color) !important;
+  background: var(--tab-custom-bg) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--tab-custom-glow) !important;
+}
+
+/* ============================================================
+   MENÚ DESPLEGABLE ANIMADO PARA SELECCIÓN DE COLOR DE PESTAÑA
+   Estilo Raycast / Linear / Zed (Dark Glassmorphism)
+   ============================================================ */
+@keyframes tabColorMenuPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.tab-color-menu {
+  position: fixed;
+  z-index: 10000;
+  width: 252px;
+  background: rgba(24, 24, 27, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 10px 12px 12px 12px;
+  animation: tabColorMenuPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top left;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  color: #f4f4f5;
+}
+
+.tab-color-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 2px;
+}
+
+.tab-color-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f4f4f5;
+  letter-spacing: -0.01em;
+}
+
+.tab-color-menu-icon {
+  color: #a1a1aa;
+}
+
+.tab-color-menu-close-btn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-color-menu-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4f4f5;
+}
+
+/* Grilla de colores predeterminados */
+.tab-color-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.tab-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.14s ease, border-color 0.14s ease;
+  position: relative;
+}
+
+.tab-color-swatch:hover {
+  transform: scale(1.22);
+  z-index: 2;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.tab-color-swatch:active {
+  transform: scale(1.05);
+}
+
+.tab-color-check {
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+.tab-color-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 10px 0;
+}
+
+/* Sección personalizada */
+.tab-color-custom-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tab-color-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tab-color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-color-picker-trigger {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.tab-color-picker-trigger:hover {
+  transform: scale(1.06);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.tab-color-native-input {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.tab-color-hex-field {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0 8px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.tab-color-hex-field:focus-within {
+  border-color: #3b82f6;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tab-color-hex-prefix {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: #71717a;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.tab-color-hex-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f4f4f5;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  width: 100%;
+  letter-spacing: 0.05em;
+}
+
+.tab-color-hex-input::placeholder {
+  color: #52525b;
+}
+
+.tab-color-pipette-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.tab-color-pipette-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Botón de restablecer */
+.tab-color-reset-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-color-reset-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+}
+
+.tab-color-reset-icon {
+  color: #71717a;
+  transition: transform 0.2s ease;
+}
+
+.tab-color-reset-item:hover .tab-color-reset-icon {
+  transform: rotate(-45deg);
+  color: #f4f4f5;
+}

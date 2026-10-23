@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { TabItem as TabItemType } from "../../types";
 import { TabItem } from "./TabItem";
+import { TabColorMenu } from "./TabColorMenu";
 import { WindowControls } from "./WindowControls";
 
 interface HeaderProps {
@@ -15,6 +16,7 @@ interface HeaderProps {
     onAddTab: () => void;
     onReorderTabs: (fromIndex: number, toIndex: number) => void;
     onCopyVersion: () => void;
+    onSetTabColor?: (id: string, color: string | undefined) => void;
 }
 
 interface DragState {
@@ -41,13 +43,22 @@ export function Header({
     onAddTab,
     onReorderTabs,
     onCopyVersion,
+    onSetTabColor,
 }: HeaderProps) {
     const tabsContainerRef = useRef<HTMLDivElement>(null);
     const [dragState, setDragState] = useState<DragState | null>(null);
+    const [colorMenu, setColorMenu] = useState<{
+        tabId: string;
+        x: number;
+        y: number;
+    } | null>(null);
     const dragStateRef = useRef<DragState | null>(null);
 
     const handlePointerDown = useCallback(
         (index: number, e: React.PointerEvent<HTMLDivElement>) => {
+            // Cerrar menú de color si estuviera abierto
+            setColorMenu(null);
+
             // Solo botón primario del ratón
             if (e.button !== 0) return;
 
@@ -239,8 +250,23 @@ export function Header({
                             isDragging={isBeingDragged}
                             style={tabStyle}
                             onPointerDown={(e) => handlePointerDown(idx, e)}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (dragState?.isDragging) return;
+                                setColorMenu({
+                                    tabId: tab.id,
+                                    x: e.clientX,
+                                    y: e.clientY,
+                                });
+                            }}
                             onSelect={() => onSelectTab(tab.id)}
-                            onClose={(e) => onCloseTab(tab.id, e)}
+                            onClose={(e) => {
+                                if (colorMenu?.tabId === tab.id) {
+                                    setColorMenu(null);
+                                }
+                                onCloseTab(tab.id, e);
+                            }}
                         />
                     );
                 })}
@@ -267,6 +293,17 @@ export function Header({
                 {/* En Windows y Linux se renderizan los controles de ventana integrados a la derecha */}
                 {!isMac && <WindowControls />}
             </div>
+
+            {colorMenu && onSetTabColor && (
+                <TabColorMenu
+                    tab={tabs.find((t) => t.id === colorMenu.tabId) || tabs[0]}
+                    position={{ x: colorMenu.x, y: colorMenu.y }}
+                    onClose={() => setColorMenu(null)}
+                    onSelectColor={(color) => {
+                        onSetTabColor(colorMenu.tabId, color);
+                    }}
+                />
+            )}
         </header>
     );
 }
