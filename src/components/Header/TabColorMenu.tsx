@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { Palette, Check, RotateCcw, Pipette, X } from "lucide-react";
-import { TabItem } from "../../types";
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from "react";
+import { Palette, Check, RotateCcw, Pipette, X, Plus, FolderMinus } from "lucide-react";
+import { TabItem, TabGroup } from "../../types";
 import { isValidHexColor, normalizeHexColor } from "../../utils";
 
 interface TabColorMenuProps {
     tab: TabItem;
     position: { x: number; y: number };
+    groups?: TabGroup[];
     onClose: () => void;
     onSelectColor: (color: string | undefined) => void;
+    onCreateGroup?: (title: string, color: string) => void;
+    onAssignGroup?: (groupId: string | undefined) => void;
 }
 
 const PRESET_COLORS = [
@@ -30,17 +33,33 @@ const PRESET_COLORS = [
 export function TabColorMenu({
     tab,
     position,
+    groups = [],
     onClose,
     onSelectColor,
+    onCreateGroup,
+    onAssignGroup,
 }: TabColorMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const colorInputRef = useRef<HTMLInputElement>(null);
     const [coords, setCoords] = useState({ x: position.x, y: position.y });
+    const [isClosing, setIsClosing] = useState(false);
     const [customHex, setCustomHex] = useState(
         tab.color ? tab.color.replace("#", "").toUpperCase() : "3B82F6"
     );
 
+    // Estado para crear nuevo grupo directamente desde el menú
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+    const [newGroupName, setNewGroupName] = useState("");
+
     const hasEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
+
+    const handleDismiss = useCallback(() => {
+        if (isClosing) return;
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, 120);
+    }, [isClosing, onClose]);
 
     // Ajustar posición para no desbordar el viewport
     useLayoutEffect(() => {
@@ -68,13 +87,13 @@ export function TabColorMenu({
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                onClose();
+                handleDismiss();
             }
         };
 
         const handlePointerDown = (e: MouseEvent | PointerEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                onClose();
+                handleDismiss();
             }
         };
 
@@ -85,16 +104,16 @@ export function TabColorMenu({
             window.removeEventListener("keydown", handleKeyDown);
             window.removeEventListener("pointerdown", handlePointerDown, true);
         };
-    }, [onClose]);
+    }, [handleDismiss]);
 
     const handleApplyPreset = (hex: string) => {
         onSelectColor(hex);
-        onClose();
+        handleDismiss();
     };
 
     const handleReset = () => {
         onSelectColor(undefined);
-        onClose();
+        handleDismiss();
     };
 
     const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,15 +149,26 @@ export function TabColorMenu({
         }
     };
 
+    const handleConfirmCreateGroup = (e: React.FormEvent) => {
+        e.preventDefault();
+        const chosenColor = tab.color || "#3B82F6";
+        const titleToUse = newGroupName.trim() || "Grupo";
+        onCreateGroup?.(titleToUse, chosenColor);
+        handleDismiss();
+    };
+
     const activeColor = tab.color?.toUpperCase();
     const currentSwatchColor = isValidHexColor("#" + customHex)
         ? "#" + customHex
         : tab.color || "#3B82F6";
 
+    const currentGroup = groups.find((g) => g.id === tab.groupId);
+    const availableGroups = groups.filter((g) => g.id !== tab.groupId);
+
     return (
         <div
             ref={menuRef}
-            className="tab-color-menu"
+            className={`tab-color-menu ${isClosing ? "is-closing" : ""}`}
             style={{
                 left: `${coords.x}px`,
                 top: `${coords.y}px`,
@@ -156,7 +186,7 @@ export function TabColorMenu({
                 <button
                     type="button"
                     className="tab-color-menu-close-btn"
-                    onClick={onClose}
+                    onClick={handleDismiss}
                     title="Cerrar (Esc)"
                 >
                     <X size={12} />
@@ -175,7 +205,7 @@ export function TabColorMenu({
                             style={{
                                 backgroundColor: item.hex,
                                 boxShadow: isSelected
-                                    ? `0 0 10px ${item.hex}99, 0 0 0 2px #18181b, 0 0 0 3.5px ${item.hex}`
+                                    ? `0 0 0 2px #18181b, 0 0 0 3.5px ${item.hex}`
                                     : undefined,
                             }}
                             title={item.name}
@@ -248,6 +278,101 @@ export function TabColorMenu({
                 <RotateCcw size={12} className="tab-color-reset-icon" />
                 <span>Restablecer color predeterminado</span>
             </button>
+
+            {/* ============================================================
+                SECCIÓN DE GRUPOS DE PESTAÑAS
+                ============================================================ */}
+            {onCreateGroup && onAssignGroup && (
+                <>
+                    <div className="tab-color-menu-divider" />
+                    <div className="tab-group-menu-section">
+                        <span className="tab-color-section-label">Grupo de pestañas</span>
+
+                        {currentGroup ? (
+                            <div className="tab-group-current-row">
+                                <div className="tab-group-badge-preview">
+                                    <span
+                                        className="tab-color-dot"
+                                        style={{ backgroundColor: currentGroup.color }}
+                                    />
+                                    <span className="tab-group-badge-name">{currentGroup.title}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="tab-group-remove-btn"
+                                    onClick={() => {
+                                        onAssignGroup(undefined);
+                                        handleDismiss();
+                                    }}
+                                    title="Quitar pestaña de este grupo"
+                                >
+                                    <FolderMinus size={12} />
+                                    <span>Quitar del grupo</span>
+                                </button>
+                            </div>
+                        ) : isCreatingGroup ? (
+                            <form onSubmit={handleConfirmCreateGroup} className="tab-group-create-form">
+                                <input
+                                    type="text"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    placeholder="Nombre del grupo..."
+                                    className="tab-group-input"
+                                    maxLength={20}
+                                    autoFocus
+                                />
+                                <div className="tab-group-form-actions">
+                                    <button
+                                        type="button"
+                                        className="tab-group-cancel-btn"
+                                        onClick={() => setIsCreatingGroup(false)}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button type="submit" className="tab-group-submit-btn">
+                                        Crear
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <button
+                                type="button"
+                                className="tab-group-action-row-btn"
+                                onClick={() => setIsCreatingGroup(true)}
+                            >
+                                <Plus size={12} />
+                                <span>Añadir a nuevo grupo</span>
+                            </button>
+                        )}
+
+                        {/* Lista de otros grupos existentes para añadir o mover */}
+                        {!isCreatingGroup && availableGroups.length > 0 && (
+                            <div className="tab-group-existing-list">
+                                <span className="tab-group-sublabel">
+                                    {currentGroup ? "Mover a otro grupo:" : "Añadir a grupo existente:"}
+                                </span>
+                                {availableGroups.map((g) => (
+                                    <button
+                                        key={g.id}
+                                        type="button"
+                                        className="tab-group-option-btn"
+                                        onClick={() => {
+                                            onAssignGroup(g.id);
+                                            handleDismiss();
+                                        }}
+                                    >
+                                        <span
+                                            className="tab-color-dot"
+                                            style={{ backgroundColor: g.color }}
+                                        />
+                                        <span className="tab-group-option-title">{g.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

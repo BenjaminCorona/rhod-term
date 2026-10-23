@@ -8,6 +8,8 @@ interface TabItemProps {
     isActive: boolean;
     modSymbol: string;
     isDragging?: boolean;
+    isNew?: boolean;
+    isClosing?: boolean;
     style?: React.CSSProperties;
     onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
     onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -21,6 +23,8 @@ export function TabItem({
     isActive,
     modSymbol,
     isDragging = false,
+    isNew = false,
+    isClosing = false,
     style,
     onPointerDown,
     onContextMenu,
@@ -33,8 +37,6 @@ export function TabItem({
         ? ({
               "--tab-custom-color": tab.color,
               "--tab-custom-bg": hexToRgba(tab.color, isActive ? 0.22 : 0.08),
-              "--tab-custom-border": hexToRgba(tab.color, isActive ? 0.45 : 0.20),
-              "--tab-custom-glow": hexToRgba(tab.color, 0.35),
           } as React.CSSProperties)
         : {};
 
@@ -47,7 +49,9 @@ export function TabItem({
         <div
             className={`tab-item ${isActive ? "active" : ""} ${
                 isDragging ? "is-dragging" : ""
-            } ${tab.color ? "has-custom-color" : ""}`}
+            } ${tab.color ? "has-custom-color" : ""} ${
+                isNew ? "is-new-tab" : ""
+            } ${isClosing ? "is-closing" : ""}`}
             style={combinedStyle}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}

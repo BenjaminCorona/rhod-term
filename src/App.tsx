@@ -28,7 +28,9 @@ export default function App() {
     // 1. Gestión de pestañas y rutas CWD
     const {
         tabs,
+        groups,
         activeTabId,
+        closingTabIds,
         tabRefs,
         tabCwds,
         setActiveTabId,
@@ -37,6 +39,12 @@ export default function App() {
         handleCwdUpdate,
         handleReorderTabs,
         handleSetTabColor,
+        handleCreateGroup,
+        handleAssignTabToGroup,
+        handleToggleGroupCollapsed,
+        handleUpdateGroup,
+        handleUngroupTabs,
+        handleCloseGroup,
     } = useTerminalTabs(showToast, (_tabId, cleanPath) => {
         refreshContext(cleanPath);
     });
@@ -196,7 +204,9 @@ export default function App() {
             {/* 1. Header con pestañas y botón nueva pestaña */}
             <Header
                 tabs={tabs}
+                groups={groups}
                 activeTabId={activeTabId}
+                closingTabIds={closingTabIds}
                 appVersion={appVersion}
                 modSymbol={modSymbol}
                 isMac={isMac}
@@ -205,6 +215,12 @@ export default function App() {
                 onAddTab={handleAddTab}
                 onReorderTabs={handleReorderTabs}
                 onSetTabColor={handleSetTabColor}
+                onCreateGroup={handleCreateGroup}
+                onAssignTabToGroup={handleAssignTabToGroup}
+                onToggleGroupCollapsed={handleToggleGroupCollapsed}
+                onUpdateGroup={handleUpdateGroup}
+                onUngroupTabs={handleUngroupTabs}
+                onCloseGroup={handleCloseGroup}
                 onCopyVersion={() => {
                     navigator.clipboard.writeText(`v${appVersion}`);
                     showToast(`Versión v${appVersion} copiada`);

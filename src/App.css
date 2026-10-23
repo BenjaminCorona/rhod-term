@@ -187,45 +187,92 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 12px 0 0;
   flex-shrink: 0;
   z-index: 10;
   -webkit-app-region: drag;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+.platform-windows .app-header,
+.platform-linux .app-header {
+  padding-left: 8px;
+}
+
+/* Espacio exclusivo de 78px en macOS para el semáforo nativo de Apple (no scrolleable) */
+.header-macos-spacer {
+  width: 78px;
+  height: 100%;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
 }
 
 /* Elementos interactivos dentro del header no deben iniciar arrastre de ventana */
 .tab-item,
 .btn-new-tab,
+.btn-carousel-nav,
 .header-version,
 .window-controls,
 .window-control-btn {
   -webkit-app-region: no-drag;
 }
 
-/* En macOS: espacio de 78px a la izquierda para el semáforo nativo de Apple */
-.platform-macos .tabs-container {
-  padding-left: 78px;
-}
-
-/* En Windows y Linux: pestañas pegadas a la izquierda */
-.platform-windows .tabs-container,
-.platform-linux .tabs-container {
-  padding-left: 0;
+/* Contenedor carrusel para navegación responsiva de pestañas */
+.tabs-carousel-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 .tabs-container {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 3px;
   overflow-x: auto;
-  max-width: 100%;
+  scrollbar-width: none;
   padding: 4px 0;
+  scroll-behavior: smooth;
 }
 
 .tabs-container::-webkit-scrollbar {
   display: none;
+}
+
+/* Botones de navegación carrusel (< y >) estilo minimalista */
+.btn-carousel-nav {
+  width: 20px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.14s ease, color 0.14s ease, transform 0.14s ease, border-color 0.14s ease;
+  z-index: 5;
+}
+
+.btn-carousel-nav:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+}
+
+.btn-carousel-nav:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 
@@ -314,9 +361,60 @@ body.dragging-tabs * {
 /* Pestaña activa (Cápsula Chrome: acento azul profundo con borde nítido) */
 .tab-item.active {
   background: rgba(14, 50, 88, 0.72);
-  border: 1px solid rgba(59, 130, 246, 0.38);
+  border: 1px solid transparent;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
   color: #ffffff;
+}
+
+/* Animación sutil y fluida al abrir pestaña nueva (estilo Apple Spring, limpio y mate sin resplandores) */
+@keyframes appleTabEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.90) translate3d(-8px, 0, 0);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.02) translate3d(1px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+.tab-item.is-new-tab:not(.is-dragging) {
+  animation: appleTabEntrance 0.20s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Animación sutil y fluida al cerrar pestaña (estilo Apple) */
+@keyframes appleTabClose {
+  0% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+    max-width: 180px;
+  }
+  35% {
+    opacity: 0.6;
+    transform: scale(0.92) translate3d(0, 2px, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.80) translate3d(0, 4px, 0);
+    max-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: -4px !important;
+    border-width: 0 !important;
+  }
+}
+
+.tab-item.is-closing {
+  animation: appleTabClose 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  will-change: transform, opacity, max-width;
 }
 
 .tab-icon {
@@ -385,7 +483,7 @@ body.dragging-tabs * {
   opacity: 1;
 }
 
-/* Botón + Nueva pestaña estilo Chrome */
+/* Botón + Nueva pestaña estilo Chrome/Apple con micro-interacción táctil */
 .btn-new-tab {
   background: transparent;
   border: none;
@@ -397,7 +495,7 @@ body.dragging-tabs * {
   justify-content: center;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.14s ease, color 0.14s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   margin-left: 4px;
   flex-shrink: 0;
 }
@@ -405,6 +503,12 @@ body.dragging-tabs * {
 .btn-new-tab:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
+  transform: scale(1.1);
+}
+
+.btn-new-tab:active {
+  transform: scale(0.90);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .header-actions {
@@ -892,6 +996,9 @@ body.dragging-tabs * {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  -webkit-app-region: drag;
 }
 
 .header-version {
@@ -1645,21 +1752,20 @@ body.dragging-tabs * {
   gap: 4px;
 }
 
-/* Pestañas con color personalizado */
+/* Pestañas con color personalizado (mate, sin resplandores) */
 .tab-color-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 6px var(--tab-custom-glow);
   margin-left: -2px;
   margin-right: 2px;
 }
 
 .tab-item.has-custom-color.active {
   background: var(--tab-custom-bg) !important;
-  border-color: var(--tab-custom-border) !important;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  border-color: transparent !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28) !important;
 }
 
 .tab-item.has-custom-color.active .tab-icon {
@@ -1669,27 +1775,42 @@ body.dragging-tabs * {
 
 .tab-item.has-custom-color:not(.active):hover {
   background: var(--tab-custom-bg) !important;
-  border-color: var(--tab-custom-border) !important;
+  border-color: transparent !important;
 }
 
 .tab-item.has-custom-color.is-dragging {
-  border-color: var(--tab-custom-color) !important;
+  border-color: transparent !important;
   background: var(--tab-custom-bg) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--tab-custom-glow) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* ============================================================
    MENÚ DESPLEGABLE ANIMADO PARA SELECCIÓN DE COLOR DE PESTAÑA
-   Estilo Raycast / Linear / Zed (Dark Glassmorphism)
+   Estilo Raycast / Linear / Zed (Dark Glassmorphism mate, sin glows)
    ============================================================ */
-@keyframes tabColorMenuPopIn {
+@keyframes appleMenuSpringIn {
   0% {
     opacity: 0;
-    transform: scale(0.92) translateY(-6px);
+    transform: scale(0.90) translate3d(0, -6px, 0);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.02) translate3d(0, 1px, 0);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes appleMenuSpringOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translate3d(0, -6px, 0);
   }
 }
 
@@ -1704,11 +1825,16 @@ body.dragging-tabs * {
   border-radius: 12px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   padding: 10px 12px 12px 12px;
-  animation: tabColorMenuPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: appleMenuSpringIn 0.20s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top left;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
   color: #f4f4f5;
+}
+
+.tab-color-menu.is-closing {
+  animation: appleMenuSpringOut 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
 }
 
 .tab-color-menu-header {
@@ -1939,4 +2065,354 @@ body.dragging-tabs * {
 .tab-color-reset-item:hover .tab-color-reset-icon {
   transform: rotate(-45deg);
   color: #f4f4f5;
+}
+
+
+/* ==========================================================================
+   GRUPOS DE PESTAÑAS (TAB GROUPS ESTILO NAVEGADOR MODERNO / APPLE)
+   ========================================================================== */
+
+/* Pastilla / Pill del grupo de pestañas */
+.tab-group-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f4f4f5;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  margin-right: 4px;
+  margin-left: 2px;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.16s ease,
+              border-color 0.16s ease,
+              opacity 0.16s ease;
+  backdrop-filter: blur(8px);
+}
+
+.tab-group-pill:hover {
+  transform: translateY(-0.5px);
+  filter: brightness(1.1);
+}
+
+.tab-group-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.tab-group-pill.collapsed {
+  padding: 0 7px;
+  opacity: 0.92;
+}
+
+/* Punto de color del grupo */
+.group-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Título del grupo */
+.group-pill-title {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+/* Insignia con conteo de pestañas cuando el grupo está colapsado */
+.group-pill-count {
+  background: rgba(0, 0, 0, 0.38);
+  border-radius: 10px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #e4e4e7;
+  line-height: 14px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* Indicador chevron de colapso/expansión */
+.group-pill-chevron {
+  color: rgba(255, 255, 255, 0.55);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.tab-group-pill:hover .group-pill-chevron {
+  color: #f4f4f5;
+}
+
+/* --------------------------------------------------------------------------
+   MENÚ CONTEXTUAL DEL GRUPO (GROUP CONTEXT MENU)
+   -------------------------------------------------------------------------- */
+.group-context-menu {
+  width: 240px;
+}
+
+.group-name-input-row {
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.group-title-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #f4f4f5;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.group-title-input:focus {
+  border-color: #3b82f6;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.group-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: left;
+}
+
+.group-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+}
+
+.group-action-btn.danger {
+  color: #f87171;
+}
+
+.group-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+}
+
+.tab-color-reset-icon.danger {
+  color: #f87171;
+}
+
+/* --------------------------------------------------------------------------
+   SECCIÓN DE GRUPOS DENTRO DEL MENÚ DE COLOR DE PESTAÑA (TAB COLOR MENU)
+   -------------------------------------------------------------------------- */
+.tab-group-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tab-group-current-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tab-group-badge-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #f4f4f5;
+  max-width: 120px;
+  overflow: hidden;
+}
+
+.tab-group-badge-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-group-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 4px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.tab-group-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* Botón "Añadir a nuevo grupo" */
+.tab-group-action-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #d4d4d8;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-group-action-row-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f4f4f5;
+}
+
+/* Formulario inline para nuevo grupo */
+.tab-group-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tab-group-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: #f4f4f5;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.tab-group-input:focus {
+  border-color: #3b82f6;
+}
+
+.tab-group-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.tab-group-cancel-btn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-group-cancel-btn:hover {
+  color: #d4d4d8;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tab-group-submit-btn {
+  background: #3b82f6;
+  border: none;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-group-submit-btn:hover {
+  background: #2563eb;
+}
+
+/* Lista de grupos existentes */
+.tab-group-existing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.tab-group-sublabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.tab-group-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: #d4d4d8;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: left;
+}
+
+.tab-group-option-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f4f4f5;
+}
+
+.tab-group-option-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

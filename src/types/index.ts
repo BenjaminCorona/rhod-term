@@ -34,11 +34,19 @@ export interface ShortcutItem {
     actionType?: ShortcutActionType;
 }
 
+export interface TabGroup {
+    id: string;
+    title: string;
+    color: string;
+    collapsed: boolean;
+}
+
 export interface TabItem {
     id: string;
     title: string;
     cwd?: string;
     color?: string;
+    groupId?: string;
 }
 
 export interface TerminalHandle {
