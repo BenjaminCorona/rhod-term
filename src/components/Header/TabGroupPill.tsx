@@ -6,37 +6,55 @@ import { hexToRgba } from "../../utils";
 interface TabGroupPillProps {
     group: TabGroup;
     tabCount: number;
+    isDragging?: boolean;
+    style?: React.CSSProperties;
     onToggleCollapse: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
+    onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
 }
 
 export function TabGroupPill({
     group,
     tabCount,
+    isDragging = false,
+    style,
     onToggleCollapse,
     onContextMenu,
+    onPointerDown,
 }: TabGroupPillProps) {
-    const bg = hexToRgba(group.color, 0.18);
-    const border = hexToRgba(group.color, 0.40);
+    const bg = hexToRgba(group.color, 0.20);
 
     return (
         <div
-            className={`tab-group-pill ${group.collapsed ? "collapsed" : "expanded"}`}
+            className={`tab-group-pill tabs-track-item ${group.collapsed ? "collapsed" : "expanded"} ${
+                isDragging ? "is-dragging" : ""
+            }`}
             style={{
                 backgroundColor: bg,
-                borderColor: border,
+                ...style,
             }}
             onClick={onToggleCollapse}
             onContextMenu={onContextMenu}
-            title={`Grupo: ${group.title} (${tabCount} pestañas) • Clic para ${
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onPointerDown={onPointerDown}
+            title={`Grupo: "${group.title}" (${tabCount} pestañas) • Clic para ${
                 group.collapsed ? "expandir" : "colapsar"
-            } • Clic derecho para opciones`}
+            } • Arrastra para reordenar • Clic derecho para opciones`}
         >
-            <span
-                className="group-pill-dot"
+            {/* Línea superior del color del grupo */}
+            <div
+                className="tab-group-top-bar"
                 style={{ backgroundColor: group.color }}
             />
-            <span className="group-pill-title">{group.title}</span>
+
+            {/* Título con el color de la pestaña */}
+            <span
+                className="group-pill-title"
+                style={{ color: group.color }}
+            >
+                {group.title}
+            </span>
 
             {group.collapsed ? (
                 <>

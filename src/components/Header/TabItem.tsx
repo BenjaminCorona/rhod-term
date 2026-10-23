@@ -1,3 +1,4 @@
+import React from "react";
 import { Terminal as TerminalIcon, X } from "lucide-react";
 import { TabItem as TabItemType } from "../../types";
 import { hexToRgba } from "../../utils";
@@ -10,10 +11,14 @@ interface TabItemProps {
     isDragging?: boolean;
     isNew?: boolean;
     isClosing?: boolean;
+    isMultiSelected?: boolean;
+    isGroupCollapsed?: boolean;
+    groupColor?: string;
+    groupTitle?: string;
     style?: React.CSSProperties;
     onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
     onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onSelect: () => void;
+    onSelect: (e: React.MouseEvent) => void;
     onClose: (e: React.MouseEvent) => void;
 }
 
@@ -25,6 +30,10 @@ export function TabItem({
     isDragging = false,
     isNew = false,
     isClosing = false,
+    isMultiSelected = false,
+    isGroupCollapsed = false,
+    groupColor,
+    groupTitle,
     style,
     onPointerDown,
     onContextMenu,
@@ -47,19 +56,35 @@ export function TabItem({
 
     return (
         <div
-            className={`tab-item ${isActive ? "active" : ""} ${
+            className={`tab-item tabs-track-item ${isActive ? "active" : ""} ${
                 isDragging ? "is-dragging" : ""
             } ${tab.color ? "has-custom-color" : ""} ${
                 isNew ? "is-new-tab" : ""
-            } ${isClosing ? "is-closing" : ""}`}
+            } ${isClosing ? "is-closing" : ""} ${
+                isMultiSelected ? "is-multi-selected" : ""
+            } ${groupColor ? "tab-in-group" : ""} ${
+                isGroupCollapsed ? "is-group-collapsed" : ""
+            }`}
             style={combinedStyle}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
             onPointerDown={onPointerDown}
             onContextMenu={onContextMenu}
             onClick={onSelect}
-            title={`Pestaña ${index + 1} (${modSymbol}${index + 1}) • Clic derecho para cambiar color`}
+            title={
+                groupTitle
+                    ? `Pestaña ${index + 1} (${modSymbol}${index + 1}) • Grupo: "${groupTitle}" • Shift/Cmd+Clic para seleccionar varias`
+                    : `Pestaña ${index + 1} (${modSymbol}${index + 1}) • Clic derecho para opciones • Shift/Cmd+Clic para seleccionar varias`
+            }
         >
+            {/* Indicador visual de pertenencia a grupo: barra de acento superior con el color del grupo */}
+            {groupColor && (
+                <div
+                    className="tab-group-indicator-bar"
+                    style={{ backgroundColor: groupColor }}
+                />
+            )}
+
             <TerminalIcon
                 size={12}
                 className="tab-icon"
@@ -87,7 +112,11 @@ export function TabItem({
                     e.stopPropagation();
                     onClose(e);
                 }}
-                title={`Cerrar pestaña (${modSymbol}W)`}
+                title={
+                    isMultiSelected
+                        ? `Cerrar pestañas seleccionadas (${modSymbol}W)`
+                        : `Cerrar pestaña (${modSymbol}W)`
+                }
                 aria-label="Cerrar pestaña"
             >
                 <X size={11} />

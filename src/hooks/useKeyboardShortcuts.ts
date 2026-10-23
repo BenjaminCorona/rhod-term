@@ -5,10 +5,12 @@ interface KeyboardShortcutsParams {
     modSymbol: string;
     isMac: boolean;
     activeTabId: string;
+    selectedTabIds?: Set<string>;
     tabsCount: number;
     tabRefs: React.MutableRefObject<Record<string, TerminalHandle | null>>;
     onAddTab: () => void;
     onCloseTab: (id: string) => void;
+    onCloseTabs?: (ids: string[]) => void;
     onSelectTab: (index: number) => void;
     onTogglePalette: (tab?: "temas" | "tipografia" | "atajos") => void;
     onClosePalette: () => void;
@@ -24,10 +26,12 @@ export function useKeyboardShortcuts({
     modSymbol,
     isMac,
     activeTabId,
+    selectedTabIds,
     tabsCount,
     tabRefs,
     onAddTab,
     onCloseTab,
+    onCloseTabs,
     onSelectTab,
     onTogglePalette,
     onClosePalette,
@@ -251,7 +255,11 @@ export function useKeyboardShortcuts({
 
             if (isCmdOrCtrl && key === "w") {
                 e.preventDefault();
-                onCloseTab(activeTabId);
+                if (selectedTabIds && selectedTabIds.size > 1 && onCloseTabs) {
+                    onCloseTabs(Array.from(selectedTabIds));
+                } else {
+                    onCloseTab(activeTabId);
+                }
                 return;
             }
 
@@ -328,8 +336,10 @@ export function useKeyboardShortcuts({
         onZoomReset,
         onCycleFont,
         onCycleTheme,
+        selectedTabIds,
         onAddTab,
         onCloseTab,
+        onCloseTabs,
         onSelectTab,
         onTogglePalette,
         onClosePalette,

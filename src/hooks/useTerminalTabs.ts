@@ -80,6 +80,10 @@ export function useTerminalTabs(
     const [groups, setGroups] = useState<TabGroup[]>(initialState.groups || []);
     const [activeTabId, setActiveTabId] = useState<string>(initialState.activeTabId);
     const [closingTabIds, setClosingTabIds] = useState<Set<string>>(new Set());
+    const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
+        () => new Set([initialState.activeTabId])
+    );
+    const lastSelectedTabIdRef = useRef<string>(initialState.activeTabId);
     const tabRefs = useRef<Record<string, TerminalHandle | null>>({});
     const [tabCwds, setTabCwds] = useState<Record<string, string>>(initialState.tabCwds);
 
@@ -106,6 +110,22 @@ export function useTerminalTabs(
         }
     }, [tabs, activeTabId, tabCwds, groups]);
 
+    // Mantener la sincronización de selectedTabIds si se eliminan pestañas
+    useEffect(() => {
+        setSelectedTabIds((prev) => {
+            const valid = new Set<string>();
+            prev.forEach((id) => {
+                if (tabs.some((t) => t.id === id)) {
+                    valid.add(id);
+                }
+            });
+            if (valid.size === 0 && tabs.length > 0) {
+                valid.add(activeTabId);
+            }
+            return valid;
+        });
+    }, [tabs, activeTabId]);
+
     const handleAddTab = useCallback(() => {
         const nextIndex = tabs.length + 1;
         const newId = `term-${Date.now()}`;
@@ -122,61 +142,94 @@ export function useTerminalTabs(
             setTabCwds((prev) => ({ ...prev, [newId]: currentActiveCwd }));
         }
         setActiveTabId(newId);
+        setSelectedTabIds(new Set([newId]));
+        lastSelectedTabIdRef.current = newId;
         showToast(`Nueva pestaña: ${newTitle}`);
     }, [tabs.length, activeTabId, tabCwds, showToast]);
 
-    const handleCloseTab = useCallback(
-        (idToClose: string, e?: React.MouseEvent) => {
-            if (e) e.stopPropagation();
+    // Cierre múltiple de pestañas con soporte de animación fluida
+    const handleCloseTabs = useCallback(
+        (idsToClose: string[]) => {
+            if (idsToClose.length === 0) return;
 
-            if (tabs.length === 1) {
-                tabRefs.current[idToClose]?.restart();
-                showToast("Pestaña reiniciada");
+            // Si se intentan cerrar todas las pestañas de la app:
+            if (idsToClose.length >= tabs.length) {
+                const firstId = tabs[0].id;
+                tabRefs.current[firstId]?.restart();
+                setTabs([{ id: firstId, title: "terminal 1" }]);
+                setGroups([]);
+                setActiveTabId(firstId);
+                setSelectedTabIds(new Set([firstId]));
+                lastSelectedTabIdRef.current = firstId;
+                showToast("Sesión reiniciada");
                 return;
             }
 
-            if (closingTabIds.has(idToClose)) return;
+            const closeSet = new Set(idsToClose);
+            setClosingTabIds((prev) => new Set([...prev, ...idsToClose]));
 
-            // Iniciar animación fluida de cierre
-            setClosingTabIds((prev) => new Set(prev).add(idToClose));
+            const remaining = tabs.filter((t) => !closeSet.has(t.id));
 
-            const indexToClose = tabs.findIndex((t) => t.id === idToClose);
-            const remaining = tabs.filter((t) => t.id !== idToClose);
-
-            // Cambiar de foco inmediatamente para que el usuario no sienta lag
-            if (activeTabId === idToClose && remaining.length > 0) {
-                const nextActive = remaining[Math.max(0, indexToClose - 1)].id;
+            // Si la activa está entre las que se cierran, cambiar a una pestaña contigua
+            if (closeSet.has(activeTabId) && remaining.length > 0) {
+                const firstClosedIdx = tabs.findIndex((t) => closeSet.has(t.id));
+                const nextActive = remaining[Math.min(Math.max(0, firstClosedIdx - 1), remaining.length - 1)].id;
                 setActiveTabId(nextActive);
+                setSelectedTabIds(new Set([nextActive]));
+                lastSelectedTabIdRef.current = nextActive;
+            } else {
+                setSelectedTabIds((prev) => {
+                    const next = new Set(prev);
+                    idsToClose.forEach((id) => next.delete(id));
+                    if (next.size === 0 && remaining.length > 0) {
+                        next.add(remaining[0].id);
+                        lastSelectedTabIdRef.current = remaining[0].id;
+                    }
+                    return next;
+                });
             }
 
-            // Remover del estado después de finalizar la animación de salida (180ms)
             setTimeout(() => {
-                delete tabRefs.current[idToClose];
+                idsToClose.forEach((id) => {
+                    delete tabRefs.current[id];
+                });
 
                 setTabCwds((prev) => {
                     const next = { ...prev };
-                    delete next[idToClose];
+                    idsToClose.forEach((id) => delete next[id]);
                     return next;
                 });
 
-                setTabs((prev) => prev.filter((t) => t.id !== idToClose));
+                setTabs((prev) => prev.filter((t) => !closeSet.has(t.id)));
                 setClosingTabIds((prev) => {
                     const next = new Set(prev);
-                    next.delete(idToClose);
+                    idsToClose.forEach((id) => next.delete(id));
                     return next;
                 });
 
-                // Limpiar grupos vacíos
+                // Limpiar grupos que queden sin pestañas
                 setGroups((prevGroups) =>
                     prevGroups.filter((g) =>
                         remaining.some((t) => t.groupId === g.id)
                     )
                 );
 
-                showToast("Pestaña cerrada");
+                showToast(
+                    idsToClose.length === 1
+                        ? "Pestaña cerrada"
+                        : `${idsToClose.length} pestañas cerradas`
+                );
             }, 180);
         },
-        [tabs, activeTabId, closingTabIds, showToast]
+        [tabs, activeTabId, showToast]
+    );
+
+    const handleCloseTab = useCallback(
+        (idToClose: string, e?: React.MouseEvent) => {
+            if (e) e.stopPropagation();
+            handleCloseTabs([idToClose]);
+        },
+        [handleCloseTabs]
     );
 
     const handleCwdUpdate = useCallback(
@@ -212,9 +265,122 @@ export function useTerminalTabs(
         });
     }, []);
 
-    const handleSetTabColor = useCallback((tabId: string, color?: string) => {
+    // Reordenamiento unificado e interactivo de pestañas y pastillas de grupos
+    const handleUnifiedDrop = useCallback(
+        (
+            from: { type: "tab" | "group"; id: string },
+            to: { type: "tab" | "group"; id: string },
+            isMovingRight: boolean
+        ) => {
+            if (from.type === to.type && from.id === to.id) return;
+
+            setTabs((prev) => {
+                if (from.type === "tab") {
+                    const fromTab = prev.find((t) => t.id === from.id);
+                    if (!fromTab) return prev;
+
+                    const withoutFrom = prev.filter((t) => t.id !== from.id);
+                    let targetGroupId = fromTab.groupId;
+                    let insertIndex = 0;
+
+                    if (to.type === "tab") {
+                        const toIndex = withoutFrom.findIndex((t) => t.id === to.id);
+                        if (toIndex === -1) return prev;
+                        const toTab = withoutFrom[toIndex];
+                        const toGroup = toTab.groupId ? groups.find((g) => g.id === toTab.groupId) : null;
+
+                        // Solo unirse al grupo si el grupo de la pestaña destino está abierto/expandido
+                        if (toTab.groupId && toGroup && !toGroup.collapsed) {
+                            targetGroupId = toTab.groupId;
+                        } else {
+                            targetGroupId = undefined;
+                        }
+                        insertIndex = isMovingRight ? toIndex + 1 : toIndex;
+                    } else {
+                        // to es una pastilla de grupo
+                        const targetGroup = groups.find((g) => g.id === to.id);
+                        const isGroupClosed = Boolean(targetGroup?.collapsed);
+
+                        if (isGroupClosed) {
+                            // REGLA CRÍTICA: SI EL GRUPO ESTÁ CERRADO, NO SE PUEDE AGREGAR NINGUNA PESTAÑA DENTRO
+                            targetGroupId = undefined;
+                            if (isMovingRight) {
+                                // Se arrastró hacia la derecha pasando el grupo cerrado: colocar DESPUÉS de todo el grupo
+                                const lastGroupTabIdx = withoutFrom.map((t) => t.groupId).lastIndexOf(to.id);
+                                insertIndex = lastGroupTabIdx !== -1 ? lastGroupTabIdx + 1 : withoutFrom.length;
+                            } else {
+                                // Se arrastró hacia la izquierda antes del grupo cerrado: colocar ANTES de todo el grupo
+                                const firstGroupTabIdx = withoutFrom.findIndex((t) => t.groupId === to.id);
+                                insertIndex = firstGroupTabIdx !== -1 ? firstGroupTabIdx : 0;
+                            }
+                        } else {
+                            // El grupo está ABIERTO/EXPANDIDO:
+                            const groupFirstTabIdx = withoutFrom.findIndex((t) => t.groupId === to.id);
+                            if (isMovingRight) {
+                                targetGroupId = to.id;
+                                insertIndex = groupFirstTabIdx !== -1 ? groupFirstTabIdx : withoutFrom.length;
+                            } else {
+                                targetGroupId = undefined;
+                                insertIndex = groupFirstTabIdx !== -1 ? Math.max(0, groupFirstTabIdx) : 0;
+                            }
+                        }
+                    }
+
+                    const updatedTab: TabItem = {
+                        ...fromTab,
+                        groupId: targetGroupId,
+                        color: targetGroupId
+                            ? (groups.find((g) => g.id === targetGroupId)?.color || fromTab.color)
+                            : fromTab.color,
+                    };
+
+                    const result = [...withoutFrom];
+                    result.splice(Math.max(0, Math.min(insertIndex, result.length)), 0, updatedTab);
+                    return result;
+                } else {
+                    // from.type === "group" (se arrastró el pill del grupo completo)
+                    const groupId = from.id;
+                    const groupTabs = prev.filter((t) => t.groupId === groupId);
+                    if (groupTabs.length === 0) return prev;
+
+                    const withoutGroup = prev.filter((t) => t.groupId !== groupId);
+                    let insertIndex = 0;
+
+                    if (to.type === "tab") {
+                        const toIdx = withoutGroup.findIndex((t) => t.id === to.id);
+                        if (toIdx !== -1) {
+                            insertIndex = isMovingRight ? toIdx + 1 : toIdx;
+                        } else {
+                            insertIndex = isMovingRight ? withoutGroup.length : 0;
+                        }
+                    } else {
+                        const otherGroupTabsIdx = withoutGroup.findIndex((t) => t.groupId === to.id);
+                        if (otherGroupTabsIdx !== -1) {
+                            if (isMovingRight) {
+                                const lastIdx = withoutGroup.map((t) => t.groupId).lastIndexOf(to.id);
+                                insertIndex = lastIdx + 1;
+                            } else {
+                                insertIndex = otherGroupTabsIdx;
+                            }
+                        } else {
+                            insertIndex = isMovingRight ? withoutGroup.length : 0;
+                        }
+                    }
+
+                    const result = [...withoutGroup];
+                    result.splice(Math.max(0, Math.min(insertIndex, result.length)), 0, ...groupTabs);
+                    return result;
+                }
+            });
+        },
+        [groups]
+    );
+
+    const handleSetTabColor = useCallback((tabIds: string | string[], color?: string) => {
+        const idList = Array.isArray(tabIds) ? tabIds : [tabIds];
+        const targetIdSet = new Set(idList);
         setTabs((prev) =>
-            prev.map((t) => (t.id === tabId ? { ...t, color } : t))
+            prev.map((t) => (targetIdSet.has(t.id) ? { ...t, color } : t))
         );
     }, []);
 
@@ -222,7 +388,10 @@ export function useTerminalTabs(
     // GESTIÓN DE GRUPOS DE PESTAÑAS (TAB GROUPS)
     // ============================================================
     const handleCreateGroup = useCallback(
-        (tabId: string, title: string, color: string) => {
+        (tabIds: string | string[], title: string, color: string) => {
+            const idList = Array.isArray(tabIds) ? tabIds : [tabIds];
+            if (idList.length === 0) return;
+
             const cleanTitle = title.trim() || "Grupo";
             const newGroupId = `group-${Date.now()}`;
             const newGroup: TabGroup = {
@@ -232,35 +401,65 @@ export function useTerminalTabs(
                 collapsed: false,
             };
 
+            const targetIdSet = new Set(idList);
+
             setGroups((prev) => [...prev, newGroup]);
-            setTabs((prev) =>
-                prev.map((t) =>
-                    t.id === tabId
-                        ? { ...t, groupId: newGroupId, color: t.color || color }
-                        : t
-                )
+            setTabs((prev) => {
+                // Separar pestañas seleccionadas y resto
+                const targetTabs = prev.filter((t) => targetIdSet.has(t.id));
+                const remainingTabs = prev.filter((t) => !targetIdSet.has(t.id));
+
+                const firstIndex = prev.findIndex((t) => targetIdSet.has(t.id));
+                const insertIndex =
+                    firstIndex !== -1
+                        ? Math.min(firstIndex, remainingTabs.length)
+                        : remainingTabs.length;
+
+                const updatedGroupTabs = targetTabs.map((t) => ({
+                    ...t,
+                    groupId: newGroupId,
+                    color: t.color || color,
+                }));
+
+                const result = [...remainingTabs];
+                result.splice(insertIndex, 0, ...updatedGroupTabs);
+                return result;
+            });
+
+            showToast(
+                idList.length === 1
+                    ? `Grupo "${cleanTitle}" creado`
+                    : `Grupo "${cleanTitle}" creado con ${idList.length} pestañas`
             );
-            showToast(`Grupo "${cleanTitle}" creado`);
         },
         [showToast]
     );
 
     const handleAssignTabToGroup = useCallback(
-        (tabId: string, targetGroupId: string | undefined) => {
+        (tabIds: string | string[], targetGroupId: string | undefined) => {
+            const idList = Array.isArray(tabIds) ? tabIds : [tabIds];
+            if (idList.length === 0) return;
+
+            const targetIdSet = new Set(idList);
+
             if (!targetGroupId) {
                 // Quitar del grupo
                 setTabs((prev) =>
                     prev.map((t) =>
-                        t.id === tabId ? { ...t, groupId: undefined } : t
+                        targetIdSet.has(t.id) ? { ...t, groupId: undefined } : t
                     )
                 );
                 // Si algún grupo quedó vacío, removerlo
                 setGroups((prevGroups) =>
                     prevGroups.filter((g) =>
-                        tabs.some((t) => t.id !== tabId && t.groupId === g.id)
+                        tabs.some((t) => !targetIdSet.has(t.id) && t.groupId === g.id)
                     )
                 );
-                showToast("Pestaña quitada del grupo");
+                showToast(
+                    idList.length === 1
+                        ? "Pestaña quitada del grupo"
+                        : `${idList.length} pestañas quitadas del grupo`
+                );
                 return;
             }
 
@@ -268,33 +467,30 @@ export function useTerminalTabs(
             if (!group) return;
 
             setTabs((prev) => {
-                const tabIndex = prev.findIndex((t) => t.id === tabId);
-                if (tabIndex === -1) return prev;
+                const movingTabs = prev.filter((t) => targetIdSet.has(t.id));
+                const otherTabs = prev.filter((t) => !targetIdSet.has(t.id));
 
-                // Encontrar el último índice de una pestaña de ese grupo para colocarla contigua
                 let lastGroupIndex = -1;
-                for (let i = prev.length - 1; i >= 0; i--) {
-                    if (prev[i].groupId === targetGroupId && prev[i].id !== tabId) {
+                for (let i = otherTabs.length - 1; i >= 0; i--) {
+                    if (otherTabs[i].groupId === targetGroupId) {
                         lastGroupIndex = i;
                         break;
                     }
                 }
 
-                const updated = [...prev];
-                const [movedTab] = updated.splice(tabIndex, 1);
-                const updatedTab = {
-                    ...movedTab,
+                const updatedMovingTabs = movingTabs.map((t) => ({
+                    ...t,
                     groupId: targetGroupId,
-                    color: movedTab.color || group.color,
-                };
+                    color: t.color || group.color,
+                }));
 
+                const result = [...otherTabs];
                 if (lastGroupIndex !== -1) {
-                    const insertIndex = tabIndex < lastGroupIndex ? lastGroupIndex : lastGroupIndex + 1;
-                    updated.splice(insertIndex, 0, updatedTab);
+                    result.splice(lastGroupIndex + 1, 0, ...updatedMovingTabs);
                 } else {
-                    updated.splice(tabIndex, 0, updatedTab);
+                    result.push(...updatedMovingTabs);
                 }
-                return updated;
+                return result;
             });
 
             // Expandir el grupo si estaba colapsado para ver la nueva pestaña
@@ -306,7 +502,11 @@ export function useTerminalTabs(
                 );
             }
 
-            showToast(`Pestaña añadida a "${group.title}"`);
+            showToast(
+                idList.length === 1
+                    ? `Pestaña añadida a "${group.title}"`
+                    : `${idList.length} pestañas añadidas a "${group.title}"`
+            );
         },
         [groups, tabs, showToast]
     );
@@ -359,39 +559,85 @@ export function useTerminalTabs(
                 return;
             }
 
-            // Si cerrar el grupo cerraría todas las pestañas de la app:
-            if (tabsInGroup.length === tabs.length) {
-                const firstId = tabsInGroup[0].id;
-                tabRefs.current[firstId]?.restart();
-                setTabs([{ id: firstId, title: "terminal 1" }]);
-                setGroups([]);
-                setActiveTabId(firstId);
-                showToast("Grupo cerrado (sesión reiniciada)");
-                return;
-            }
-
-            // Cerrar todas las pestañas de ese grupo
-            const idsToClose = new Set(tabsInGroup.map((t) => t.id));
-            setTabs((prev) => prev.filter((t) => !idsToClose.has(t.id)));
-            setGroups((prev) => prev.filter((g) => g.id !== groupId));
-
-            // Si la activa estaba en el grupo, cambiar a la primera que quede
-            if (idsToClose.has(activeTabId)) {
-                const remaining = tabs.filter((t) => !idsToClose.has(t.id));
-                if (remaining.length > 0) {
-                    setActiveTabId(remaining[0].id);
-                }
-            }
-            showToast("Grupo y sus pestañas cerradas");
+            const idsToClose = tabsInGroup.map((t) => t.id);
+            handleCloseTabs(idsToClose);
         },
-        [tabs, activeTabId, showToast]
+        [tabs, handleCloseTabs]
     );
 
-    // Auto-expandir grupo si la pestaña activa pertenece a un grupo colapsado
-    const handleSelectTab = useCallback(
-        (tabId: string) => {
+    // Reordenar un grupo entero a la izquierda o a la derecha
+    const handleReorderGroup = useCallback(
+        (groupId: string, direction: "left" | "right") => {
+            setTabs((prev) => {
+                const groupTabs = prev.filter((t) => t.groupId === groupId);
+                if (groupTabs.length === 0) return prev;
+
+                const nonGroupTabs = prev.filter((t) => t.groupId !== groupId);
+
+                const groupFirstIndex = prev.findIndex((t) => t.groupId === groupId);
+                const groupLastIndex = prev.map((t) => t.groupId).lastIndexOf(groupId);
+
+                if (direction === "left") {
+                    if (groupFirstIndex <= 0) return prev;
+                    const prevItem = prev[groupFirstIndex - 1];
+                    let insertIdx = 0;
+                    if (prevItem.groupId) {
+                        insertIdx = nonGroupTabs.findIndex(
+                            (t) => t.groupId === prevItem.groupId
+                        );
+                    } else {
+                        insertIdx = nonGroupTabs.findIndex((t) => t.id === prevItem.id);
+                    }
+                    const result = [...nonGroupTabs];
+                    result.splice(Math.max(0, insertIdx), 0, ...groupTabs);
+                    return result;
+                } else {
+                    if (groupLastIndex >= prev.length - 1) return prev;
+                    const nextItem = prev[groupLastIndex + 1];
+                    let insertIdx = nonGroupTabs.length;
+                    if (nextItem.groupId) {
+                        const lastOfNext = nonGroupTabs
+                            .map((t) => t.groupId)
+                            .lastIndexOf(nextItem.groupId);
+                        insertIdx = lastOfNext + 1;
+                    } else {
+                        insertIdx =
+                            nonGroupTabs.findIndex((t) => t.id === nextItem.id) + 1;
+                    }
+                    const result = [...nonGroupTabs];
+                    result.splice(Math.min(result.length, insertIdx), 0, ...groupTabs);
+                    return result;
+                }
+            });
+            showToast("Grupo reordenado");
+        },
+        [showToast]
+    );
+
+    // Mover grupo a una posición de índice arbitraria (para drag & drop del pill de grupo)
+    const handleMoveGroupToIndex = useCallback(
+        (groupId: string, targetIndex: number) => {
+            setTabs((prev) => {
+                const groupTabs = prev.filter((t) => t.groupId === groupId);
+                if (groupTabs.length === 0) return prev;
+                const nonGroupTabs = prev.filter((t) => t.groupId !== groupId);
+                const clamped = Math.max(0, Math.min(targetIndex, nonGroupTabs.length));
+                const result = [...nonGroupTabs];
+                result.splice(clamped, 0, ...groupTabs);
+                return result;
+            });
+        },
+        []
+    );
+
+    // Selección de pestañas con soporte para Shift (rango) y Cmd/Ctrl (individual múltiple)
+    const handleSelectTabWithModifiers = useCallback(
+        (tabId: string, modifiers?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => {
             const tab = tabs.find((t) => t.id === tabId);
-            if (tab?.groupId) {
+            if (!tab) return;
+
+            // Auto-expandir grupo si estaba colapsado
+            if (tab.groupId) {
                 setGroups((prev) =>
                     prev.map((g) =>
                         g.id === tab.groupId && g.collapsed
@@ -400,21 +646,57 @@ export function useTerminalTabs(
                     )
                 );
             }
-            setActiveTabId(tabId);
+
+            if (modifiers?.shiftKey) {
+                const anchorId = lastSelectedTabIdRef.current || activeTabId;
+                const anchorIndex = tabs.findIndex((t) => t.id === anchorId);
+                const targetIndex = tabs.findIndex((t) => t.id === tabId);
+
+                if (anchorIndex !== -1 && targetIndex !== -1) {
+                    const start = Math.min(anchorIndex, targetIndex);
+                    const end = Math.max(anchorIndex, targetIndex);
+                    const rangeIds = tabs.slice(start, end + 1).map((t) => t.id);
+                    setSelectedTabIds(new Set(rangeIds));
+                } else {
+                    setSelectedTabIds(new Set([tabId]));
+                }
+                setActiveTabId(tabId);
+            } else if (modifiers?.metaKey || modifiers?.ctrlKey) {
+                setSelectedTabIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(tabId)) {
+                        if (next.size > 1) {
+                            next.delete(tabId);
+                        }
+                    } else {
+                        next.add(tabId);
+                    }
+                    return next;
+                });
+                setActiveTabId(tabId);
+                lastSelectedTabIdRef.current = tabId;
+            } else {
+                setSelectedTabIds(new Set([tabId]));
+                setActiveTabId(tabId);
+                lastSelectedTabIdRef.current = tabId;
+            }
         },
-        [tabs]
+        [tabs, activeTabId]
     );
 
     return {
         tabs,
         groups,
         activeTabId,
+        selectedTabIds,
         closingTabIds,
         tabRefs,
         tabCwds,
-        setActiveTabId: handleSelectTab,
+        setActiveTabId,
+        handleSelectTabWithModifiers,
         handleAddTab,
         handleCloseTab,
+        handleCloseTabs,
         handleCwdUpdate,
         handleReorderTabs,
         handleSetTabColor,
@@ -424,5 +706,8 @@ export function useTerminalTabs(
         handleUpdateGroup,
         handleUngroupTabs,
         handleCloseGroup,
+        handleReorderGroup,
+        handleMoveGroupToIndex,
+        handleUnifiedDrop,
     };
 }

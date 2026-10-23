@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo, Fragment } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { TabItem as TabItemType, TabGroup } from "../../types";
 import { TabItem } from "./TabItem";
 import { TabColorMenu } from "./TabColorMenu";
@@ -11,21 +12,34 @@ interface HeaderProps {
     tabs: TabItemType[];
     groups?: TabGroup[];
     activeTabId: string;
+    selectedTabIds?: Set<string>;
     appVersion: string;
     modSymbol: string;
     isMac: boolean;
     onSelectTab: (id: string) => void;
+    onSelectTabWithModifiers?: (
+        id: string,
+        e: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }
+    ) => void;
     onCloseTab: (id: string, e: React.MouseEvent) => void;
+    onCloseTabs?: (ids: string[]) => void;
     onAddTab: () => void;
     onReorderTabs: (fromIndex: number, toIndex: number) => void;
+    onUnifiedDrop?: (
+        from: { type: "tab" | "group"; id: string },
+        to: { type: "tab" | "group"; id: string },
+        isMovingRight: boolean
+    ) => void;
     onCopyVersion: () => void;
-    onSetTabColor?: (id: string, color: string | undefined) => void;
-    onCreateGroup?: (tabId: string, title: string, color: string) => void;
-    onAssignTabToGroup?: (tabId: string, groupId?: string) => void;
+    onSetTabColor?: (ids: string | string[], color: string | undefined) => void;
+    onCreateGroup?: (ids: string | string[], title: string, color: string) => void;
+    onAssignTabToGroup?: (ids: string | string[], groupId?: string) => void;
     onToggleGroupCollapsed?: (groupId: string) => void;
     onUpdateGroup?: (groupId: string, title: string, color: string) => void;
     onUngroupTabs?: (groupId: string) => void;
     onCloseGroup?: (groupId: string) => void;
+    onReorderGroup?: (groupId: string, direction: "left" | "right") => void;
+    onMoveGroupToIndex?: (groupId: string, targetIndex: number) => void;
     closingTabIds?: Set<string>;
 }
 
@@ -34,7 +48,7 @@ interface DragState {
     startX: number;
     deltaX: number;
     isDragging: boolean;
-    tabRects: Array<{ left: number; right: number; width: number; center: number }>;
+    rects: Array<{ left: number; right: number; width: number; center: number }>;
     draggedWidth: number;
     gap: number;
     targetIndex: number;
@@ -42,17 +56,41 @@ interface DragState {
     maxDelta: number;
 }
 
+interface BarItemTab {
+    type: "tab";
+    id: string;
+    key: string;
+    tab: TabItemType;
+    groupId?: string;
+    isGroupCollapsed?: boolean;
+}
+
+interface BarItemGroup {
+    type: "group";
+    id: string;
+    key: string;
+    groupId: string;
+    group: TabGroup;
+    tabCount: number;
+}
+
+type BarItem = BarItemTab | BarItemGroup;
+
 export function Header({
     tabs,
     groups = [],
     activeTabId,
+    selectedTabIds = new Set(),
     appVersion,
     modSymbol,
     isMac,
     onSelectTab,
+    onSelectTabWithModifiers,
     onCloseTab,
+    onCloseTabs,
     onAddTab,
     onReorderTabs,
+    onUnifiedDrop,
     onCopyVersion,
     onSetTabColor,
     onCreateGroup,
@@ -61,10 +99,14 @@ export function Header({
     onUpdateGroup,
     onUngroupTabs,
     onCloseGroup,
+    onReorderGroup,
+    onMoveGroupToIndex: _onMoveGroupToIndex,
     closingTabIds,
 }: HeaderProps) {
     const tabsContainerRef = useRef<HTMLDivElement>(null);
     const [dragState, setDragState] = useState<DragState | null>(null);
+    const dragStateRef = useRef<DragState | null>(null);
+
     const [colorMenu, setColorMenu] = useState<{
         tabId: string;
         x: number;
@@ -75,16 +117,52 @@ export function Header({
         x: number;
         y: number;
     } | null>(null);
-    const dragStateRef = useRef<DragState | null>(null);
 
-    // Pestañas visibles en el DOM (excluye las pestañas dentro de grupos colapsados)
-    const visibleTabs = useMemo(() => {
-        return tabs.filter((tab) => {
-            if (!tab.groupId) return true;
-            const group = groups.find((g) => g.id === tab.groupId);
-            return !group?.collapsed;
+    // Estructura lineal unificada de elementos en la barra (pestañas y pastillas de grupos)
+    const barItems = useMemo<BarItem[]>(() => {
+        const items: BarItem[] = [];
+        const renderedPillIds = new Set<string>();
+
+        tabs.forEach((tab) => {
+            if (tab.groupId && !renderedPillIds.has(tab.groupId)) {
+                renderedPillIds.add(tab.groupId);
+                const g = groups.find((gr) => gr.id === tab.groupId);
+                if (g) {
+                    const count = tabs.filter((t) => t.groupId === g.id).length;
+                    items.push({
+                        type: "group",
+                        id: g.id,
+                        key: `pill-${g.id}`,
+                        groupId: g.id,
+                        group: g,
+                        tabCount: count,
+                    });
+                }
+            }
+
+            const g = tab.groupId ? groups.find((gr) => gr.id === tab.groupId) : null;
+            const isCollapsed = Boolean(g?.collapsed);
+
+            items.push({
+                type: "tab",
+                id: tab.id,
+                key: `tab-${tab.id}`,
+                tab,
+                groupId: tab.groupId,
+                isGroupCollapsed: isCollapsed,
+            });
         });
+
+        return items;
     }, [tabs, groups]);
+
+    // Elementos visibles actualmente en el track (excluye pestañas dentro de grupos colapsados)
+    const visibleBarItems = useMemo<BarItem[]>(() => {
+        return barItems.filter((item) => {
+            if (item.type === "group") return true;
+            return !item.isGroupCollapsed;
+        });
+    }, [barItems]);
 
     // Detección sutil de apertura de nueva pestaña para animación estilo Apple
     const [newTabId, setNewTabId] = useState<string | null>(null);
@@ -203,27 +281,26 @@ export function Header({
         prevTabsLength.current = tabs.length;
     }, [tabs]);
 
+    // ============================================================
+    // ARRASTRE UNIFICADO DE ELEMENTOS (PESTAÑAS Y PASTILLAS DE GRUPOS)
+    // ============================================================
     const handlePointerDown = useCallback(
         (visibleIndex: number, e: React.PointerEvent<HTMLDivElement>) => {
-            // Cerrar menú de color y de grupo si estuvieran abiertos
             setColorMenu(null);
             setGroupMenu(null);
 
-            // Solo botón primario del ratón
             if (e.button !== 0) return;
-
-            // Evitar selección accidental de texto en WebKit/macOS
             window.getSelection()?.removeAllRanges();
 
             const container = tabsContainerRef.current;
             if (!container) return;
 
-            const tabElements = Array.from(
-                container.querySelectorAll<HTMLElement>(".tab-item")
+            const trackElements = Array.from(
+                container.querySelectorAll<HTMLElement>(".tabs-track-item:not(.is-group-collapsed)")
             );
-            if (!tabElements[visibleIndex]) return;
+            if (!trackElements[visibleIndex]) return;
 
-            const rects = tabElements.map((el) => {
+            const rects = trackElements.map((el) => {
                 const r = el.getBoundingClientRect();
                 return {
                     left: r.left,
@@ -253,7 +330,7 @@ export function Header({
                 startX: e.clientX,
                 deltaX: 0,
                 isDragging: false,
-                tabRects: rects,
+                rects,
                 draggedWidth: draggedRect.width,
                 gap,
                 targetIndex: visibleIndex,
@@ -264,21 +341,20 @@ export function Header({
             dragStateRef.current = state;
 
             const handlePointerMove = (moveEvent: PointerEvent) => {
-                const state = dragStateRef.current;
-                if (!state) return;
+                const s = dragStateRef.current;
+                if (!s) return;
 
-                const deltaX = moveEvent.clientX - state.startX;
+                const deltaX = moveEvent.clientX - s.startX;
 
-                if (!state.isDragging && Math.abs(deltaX) > 4) {
-                    state.isDragging = true;
+                if (!s.isDragging && Math.abs(deltaX) > 4) {
+                    s.isDragging = true;
                     document.body.classList.add("dragging-tabs");
                 }
 
-                if (state.isDragging) {
+                if (s.isDragging) {
                     moveEvent.preventDefault();
                     window.getSelection()?.removeAllRanges();
 
-                    // Auto-scroll durante arrastre si el cursor se acerca a los extremos del carrusel
                     const scrollContainer = tabsContainerRef.current;
                     if (scrollContainer) {
                         const cRect = scrollContainer.getBoundingClientRect();
@@ -289,27 +365,26 @@ export function Header({
                         }
                     }
 
-                    // Contener el desplazamiento dentro del área visible de pestañas
                     const clampedDelta = Math.max(
-                        state.minDelta,
-                        Math.min(state.maxDelta, deltaX)
+                        s.minDelta,
+                        Math.min(s.maxDelta, deltaX)
                     );
-                    state.deltaX = clampedDelta;
+                    s.deltaX = clampedDelta;
 
                     const currentCenterX =
-                        state.tabRects[state.dragIndex].center + clampedDelta;
+                        s.rects[s.dragIndex].center + clampedDelta;
 
-                    let target = state.dragIndex;
-                    for (let i = 0; i < state.tabRects.length; i++) {
-                        if (i === state.dragIndex) continue;
-                        const otherCenter = state.tabRects[i].center;
+                    let target = s.dragIndex;
+                    for (let i = 0; i < s.rects.length; i++) {
+                        if (i === s.dragIndex) continue;
+                        const otherCenter = s.rects[i].center;
                         if (
-                            state.dragIndex < i &&
+                            s.dragIndex < i &&
                             currentCenterX > otherCenter
                         ) {
                             target = i;
                         } else if (
-                            state.dragIndex > i &&
+                            s.dragIndex > i &&
                             currentCenterX < otherCenter
                         ) {
                             target = i;
@@ -317,30 +392,30 @@ export function Header({
                         }
                     }
 
-                    if (isMac && target === 0 && state.dragIndex !== 0) {
-                        const firstTabLeft = state.tabRects[0].left;
+                    if (isMac && target === 0 && s.dragIndex !== 0) {
+                        const firstItemLeft = s.rects[0].left;
                         const draggedLeft =
-                            state.tabRects[state.dragIndex].left + clampedDelta;
-                        if (draggedLeft < firstTabLeft - 10) {
-                            state.deltaX = firstTabLeft - state.tabRects[state.dragIndex].left;
+                            s.rects[s.dragIndex].left + clampedDelta;
+                        if (draggedLeft < firstItemLeft - 10) {
+                            s.deltaX = firstItemLeft - s.rects[s.dragIndex].left;
                         }
                     }
 
                     if (
-                        target > state.dragIndex &&
-                        state.tabRects[target] &&
-                        currentCenterX < state.tabRects[target].center - 10
+                        target > s.dragIndex &&
+                        s.rects[target] &&
+                        currentCenterX < s.rects[target].center - 10
                     ) {
                         target--;
                     }
 
-                    state.targetIndex = target;
-                    setDragState({ ...state });
+                    s.targetIndex = target;
+                    setDragState({ ...s });
                 }
             };
 
             const handlePointerUp = () => {
-                const state = dragStateRef.current;
+                const s = dragStateRef.current;
                 window.removeEventListener("pointermove", handlePointerMove);
                 window.removeEventListener("pointerup", handlePointerUp);
                 window.removeEventListener("pointercancel", handlePointerUp);
@@ -348,13 +423,21 @@ export function Header({
                 document.body.classList.remove("dragging-tabs");
                 window.getSelection()?.removeAllRanges();
 
-                if (state) {
-                    if (state.isDragging && state.targetIndex !== state.dragIndex) {
-                        const fromTab = visibleTabs[state.dragIndex];
-                        const toTab = visibleTabs[state.targetIndex];
-                        if (fromTab && toTab && fromTab.id !== toTab.id) {
-                            const fromIndex = tabs.findIndex((t) => t.id === fromTab.id);
-                            const toIndex = tabs.findIndex((t) => t.id === toTab.id);
+                if (s && s.isDragging && s.targetIndex !== s.dragIndex) {
+                    const fromItem = visibleBarItems[s.dragIndex];
+                    const toItem = visibleBarItems[s.targetIndex];
+                    const isMovingRight = s.targetIndex > s.dragIndex;
+
+                    if (fromItem && toItem) {
+                        if (onUnifiedDrop) {
+                            onUnifiedDrop(
+                                { type: fromItem.type, id: fromItem.id },
+                                { type: toItem.type, id: toItem.id },
+                                isMovingRight
+                            );
+                        } else if (fromItem.type === "tab" && toItem.type === "tab") {
+                            const fromIndex = tabs.findIndex((t) => t.id === fromItem.id);
+                            const toIndex = tabs.findIndex((t) => t.id === toItem.id);
                             if (fromIndex !== -1 && toIndex !== -1) {
                                 onReorderTabs(fromIndex, toIndex);
                             }
@@ -370,8 +453,59 @@ export function Header({
             window.addEventListener("pointerup", handlePointerUp);
             window.addEventListener("pointercancel", handlePointerUp);
         },
-        [visibleTabs, tabs, onReorderTabs]
+        [visibleBarItems, tabs, isMac, onUnifiedDrop, onReorderTabs]
     );
+
+    // Determinar si el grupo seleccionado en el menú puede moverse a izquierda o derecha
+    const canMoveGroupLeft = useMemo(() => {
+        if (!groupMenu) return false;
+        const groupTabs = tabs.filter((t) => t.groupId === groupMenu.group.id);
+        if (groupTabs.length === 0) return false;
+        const firstIdx = tabs.findIndex((t) => t.groupId === groupMenu.group.id);
+        return firstIdx > 0;
+    }, [groupMenu, tabs]);
+
+    const canMoveGroupRight = useMemo(() => {
+        if (!groupMenu) return false;
+        const groupTabs = tabs.filter((t) => t.groupId === groupMenu.group.id);
+        if (groupTabs.length === 0) return false;
+        const lastIdx = tabs.map((t) => t.groupId).lastIndexOf(groupMenu.group.id);
+        return lastIdx < tabs.length - 1;
+    }, [groupMenu, tabs]);
+
+    // Calcular las pestañas sobre las que opera el menú de color (soporte multi-selección)
+    const effectiveColorMenuTargetIds = useMemo(() => {
+        if (!colorMenu) return [];
+        if (selectedTabIds.has(colorMenu.tabId) && selectedTabIds.size > 1) {
+            return Array.from(selectedTabIds);
+        }
+        return [colorMenu.tabId];
+    }, [colorMenu, selectedTabIds]);
+
+    // Arrastre nativo de la ventana al interactuar con el área vacía del header (sin pestañas)
+    const handleEmptyAreaPointerDown = useCallback((e: React.PointerEvent) => {
+        if (e.button !== 0) return;
+        const target = e.target as HTMLElement;
+        if (
+            target === tabsContainerRef.current ||
+            target.classList.contains("tabs-container") ||
+            target.classList.contains("tabs-carousel-wrapper")
+        ) {
+            if (e.detail === 2) {
+                try {
+                    getCurrentWindow().toggleMaximize().catch(() => {});
+                } catch {
+                    // Ignorar en pruebas web
+                }
+            } else {
+                try {
+                    getCurrentWindow().startDragging().catch(() => {});
+                } catch {
+                    // Ignorar en pruebas web
+                }
+            }
+        }
+    }, []);
 
     return (
         <header className="app-header" data-tauri-drag-region>
@@ -381,7 +515,11 @@ export function Header({
             )}
 
             {/* 2. Envoltura de carrusel responsivo con botones < > y scroll con rueda del ratón */}
-            <div className="tabs-carousel-wrapper">
+            <div
+                className="tabs-carousel-wrapper"
+                data-tauri-drag-region
+                onPointerDown={handleEmptyAreaPointerDown}
+            >
                 {canScrollLeft && (
                     <button
                         type="button"
@@ -399,64 +537,34 @@ export function Header({
                     className={`tabs-container ${
                         dragState?.isDragging ? "has-dragging" : ""
                     }`}
+                    data-tauri-drag-region
+                    onPointerDown={handleEmptyAreaPointerDown}
                 >
                     {(() => {
-                        const renderedPillIds = new Set<string>();
                         let currentVisibleIndex = 0;
 
-                        return tabs.map((tab) => {
-                            let pillElement: React.ReactNode = null;
-                            if (tab.groupId && !renderedPillIds.has(tab.groupId)) {
-                                renderedPillIds.add(tab.groupId);
-                                const group = groups.find((g) => g.id === tab.groupId);
-                                if (group) {
-                                    const count = tabs.filter((t) => t.groupId === group.id).length;
-                                    pillElement = (
-                                        <TabGroupPill
-                                            key={`pill-${group.id}`}
-                                            group={group}
-                                            tabCount={count}
-                                            onToggleCollapse={() => onToggleGroupCollapsed?.(group.id)}
-                                            onContextMenu={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                setColorMenu(null);
-                                                setGroupMenu({
-                                                    group,
-                                                    x: e.clientX,
-                                                    y: e.clientY,
-                                                });
-                                            }}
-                                        />
-                                    );
-                                }
+                        return barItems.map((item) => {
+                            const isItemCollapsed =
+                                item.type === "tab" && Boolean(item.isGroupCollapsed);
+
+                            let visibleIdx = -1;
+                            if (!isItemCollapsed) {
+                                visibleIdx = currentVisibleIndex++;
                             }
 
-                            const group = tab.groupId
-                                ? groups.find((g) => g.id === tab.groupId)
-                                : null;
-                            const isCollapsed = Boolean(group?.collapsed);
-
-                            if (isCollapsed) {
-                                return pillElement ? (
-                                    <Fragment key={`pill-wrap-${tab.id}`}>
-                                        {pillElement}
-                                    </Fragment>
-                                ) : null;
-                            }
-
-                            const visibleIdx = currentVisibleIndex++;
-                            let tabStyle: React.CSSProperties = {
+                            let itemStyle: React.CSSProperties = {
                                 transform: "translate3d(0, 0, 0)",
                                 transition: "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                             };
+
                             const isBeingDragged =
+                                !isItemCollapsed &&
                                 Boolean(dragState?.isDragging) &&
                                 dragState?.dragIndex === visibleIdx;
 
-                            if (dragState?.isDragging) {
+                            if (dragState?.isDragging && !isItemCollapsed && visibleIdx !== -1) {
                                 if (isBeingDragged) {
-                                    tabStyle = {
+                                    itemStyle = {
                                         transform: `translate3d(${dragState.deltaX}px, 0, 0) scale(1.02)`,
                                         zIndex: 50,
                                         transition: "none",
@@ -486,7 +594,7 @@ export function Header({
                                         }
                                     }
 
-                                    tabStyle = {
+                                    itemStyle = {
                                         transform: `translate3d(${shiftX}px, 0, 0)`,
                                         transition:
                                             "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -495,22 +603,69 @@ export function Header({
                                 }
                             }
 
-                            const tabNode = (
+                            if (item.type === "group") {
+                                return (
+                                    <TabGroupPill
+                                        key={item.key}
+                                        group={item.group}
+                                        tabCount={item.tabCount}
+                                        isDragging={isBeingDragged}
+                                        style={itemStyle}
+                                        onToggleCollapse={() => {
+                                            if (dragState?.isDragging) return;
+                                            onToggleGroupCollapsed?.(item.group.id);
+                                        }}
+                                        onPointerDown={(e) => {
+                                            if (visibleIdx !== -1) {
+                                                handlePointerDown(visibleIdx, e);
+                                            }
+                                        }}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (dragState?.isDragging) return;
+                                            setColorMenu(null);
+                                            setGroupMenu({
+                                                group: item.group,
+                                                x: e.clientX,
+                                                y: e.clientY,
+                                            });
+                                        }}
+                                    />
+                                );
+                            }
+
+                            // Renderizado de pestaña (TabItem)
+                            const tab = item.tab;
+                            const group = tab.groupId
+                                ? groups.find((g) => g.id === tab.groupId)
+                                : null;
+                            const tabOverallIndex = tabs.findIndex((t) => t.id === tab.id);
+
+                            return (
                                 <TabItem
-                                    key={tab.id}
+                                    key={item.key}
                                     tab={tab}
-                                    index={visibleIdx}
+                                    index={tabOverallIndex !== -1 ? tabOverallIndex : 0}
                                     isActive={tab.id === activeTabId}
+                                    isMultiSelected={selectedTabIds.has(tab.id)}
+                                    isGroupCollapsed={isItemCollapsed}
+                                    groupColor={group?.color}
+                                    groupTitle={group?.title}
                                     modSymbol={modSymbol}
                                     isDragging={isBeingDragged}
                                     isNew={tab.id === newTabId}
                                     isClosing={closingTabIds?.has(tab.id)}
-                                    style={tabStyle}
-                                    onPointerDown={(e) => handlePointerDown(visibleIdx, e)}
+                                    style={itemStyle}
+                                    onPointerDown={(e) => {
+                                        if (!isItemCollapsed && visibleIdx !== -1) {
+                                            handlePointerDown(visibleIdx, e);
+                                        }
+                                    }}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        if (dragState?.isDragging) return;
+                                        if (dragState?.isDragging || isItemCollapsed) return;
                                         setGroupMenu(null);
                                         setColorMenu({
                                             tabId: tab.id,
@@ -518,26 +673,30 @@ export function Header({
                                             y: e.clientY,
                                         });
                                     }}
-                                    onSelect={() => onSelectTab(tab.id)}
+                                    onSelect={(e) => {
+                                        if (dragState?.isDragging) return;
+                                        if (onSelectTabWithModifiers) {
+                                            onSelectTabWithModifiers(tab.id, e);
+                                        } else {
+                                            onSelectTab(tab.id);
+                                        }
+                                    }}
                                     onClose={(e) => {
                                         if (colorMenu?.tabId === tab.id) {
                                             setColorMenu(null);
                                         }
-                                        onCloseTab(tab.id, e);
+                                        if (
+                                            selectedTabIds.has(tab.id) &&
+                                            selectedTabIds.size > 1 &&
+                                            onCloseTabs
+                                        ) {
+                                            onCloseTabs(Array.from(selectedTabIds));
+                                        } else {
+                                            onCloseTab(tab.id, e);
+                                        }
                                     }}
                                 />
                             );
-
-                            if (pillElement) {
-                                return (
-                                    <Fragment key={`group-wrapper-${tab.id}`}>
-                                        {pillElement}
-                                        {tabNode}
-                                    </Fragment>
-                                );
-                            }
-
-                            return tabNode;
                         });
                     })()}
                 </div>
@@ -573,25 +732,28 @@ export function Header({
                     v{appVersion}
                 </span>
 
-                {/* En Windows y Linux se renderizan los controles de ventana integrados a la derecha */}
                 {!isMac && <WindowControls />}
             </div>
 
-            {/* Menú de colores y asignación a grupos para una pestaña */}
+            {/* Menú de colores y asignación a grupos para una o varias pestañas */}
             {colorMenu && onSetTabColor && (
                 <TabColorMenu
                     tab={tabs.find((t) => t.id === colorMenu.tabId) || tabs[0]}
                     position={{ x: colorMenu.x, y: colorMenu.y }}
                     groups={groups}
+                    selectedCount={effectiveColorMenuTargetIds.length}
                     onClose={() => setColorMenu(null)}
                     onSelectColor={(color) => {
-                        onSetTabColor(colorMenu.tabId, color);
+                        onSetTabColor(effectiveColorMenuTargetIds, color);
                     }}
                     onCreateGroup={(title, color) => {
-                        onCreateGroup?.(colorMenu.tabId, title, color);
+                        onCreateGroup?.(effectiveColorMenuTargetIds, title, color);
                     }}
                     onAssignGroup={(groupId) => {
-                        onAssignTabToGroup?.(colorMenu.tabId, groupId);
+                        onAssignTabToGroup?.(effectiveColorMenuTargetIds, groupId);
+                    }}
+                    onCloseSelected={() => {
+                        onCloseTabs?.(effectiveColorMenuTargetIds);
                     }}
                 />
             )}
@@ -601,6 +763,8 @@ export function Header({
                 <GroupContextMenu
                     group={groups.find((g) => g.id === groupMenu.group.id) || groupMenu.group}
                     position={{ x: groupMenu.x, y: groupMenu.y }}
+                    canMoveLeft={canMoveGroupLeft}
+                    canMoveRight={canMoveGroupRight}
                     onClose={() => setGroupMenu(null)}
                     onUpdateGroup={(title, color) => {
                         onUpdateGroup(groupMenu.group.id, title, color);
@@ -610,6 +774,12 @@ export function Header({
                     }}
                     onCloseGroup={() => {
                         onCloseGroup(groupMenu.group.id);
+                    }}
+                    onMoveLeft={() => {
+                        onReorderGroup?.(groupMenu.group.id, "left");
+                    }}
+                    onMoveRight={() => {
+                        onReorderGroup?.(groupMenu.group.id, "right");
                     }}
                 />
             )}

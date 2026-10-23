@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from "react";
-import { Check, X, Layers, Trash2, Tag } from "lucide-react";
+import { Check, X, Layers, Trash2, Tag, ArrowLeft, ArrowRight } from "lucide-react";
 import { TabGroup } from "../../types";
 
 interface GroupContextMenuProps {
     group: TabGroup;
     position: { x: number; y: number };
+    canMoveLeft?: boolean;
+    canMoveRight?: boolean;
     onClose: () => void;
     onUpdateGroup: (title: string, color: string) => void;
     onUngroup: () => void;
     onCloseGroup: () => void;
+    onMoveLeft?: () => void;
+    onMoveRight?: () => void;
 }
 
 const GROUP_COLORS = [
@@ -31,10 +35,14 @@ const GROUP_COLORS = [
 export function GroupContextMenu({
     group,
     position,
+    canMoveLeft = true,
+    canMoveRight = true,
     onClose,
     onUpdateGroup,
     onUngroup,
     onCloseGroup,
+    onMoveLeft,
+    onMoveRight,
 }: GroupContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [coords, setCoords] = useState({ x: position.x, y: position.y });
@@ -182,6 +190,49 @@ export function GroupContextMenu({
             </div>
 
             <div className="tab-color-menu-divider" />
+
+            {/* Acciones de reordenamiento de grupo */}
+            {(onMoveLeft || onMoveRight) && (
+                <>
+                    <div className="group-menu-actions">
+                        {onMoveLeft && (
+                            <button
+                                type="button"
+                                disabled={!canMoveLeft}
+                                className={`tab-color-reset-item group-action-btn ${
+                                    !canMoveLeft ? "disabled" : ""
+                                }`}
+                                onClick={() => {
+                                    if (!canMoveLeft) return;
+                                    onMoveLeft();
+                                    handleDismiss();
+                                }}
+                            >
+                                <ArrowLeft size={12} className="tab-color-reset-icon" />
+                                <span>Mover grupo a la izquierda</span>
+                            </button>
+                        )}
+                        {onMoveRight && (
+                            <button
+                                type="button"
+                                disabled={!canMoveRight}
+                                className={`tab-color-reset-item group-action-btn ${
+                                    !canMoveRight ? "disabled" : ""
+                                }`}
+                                onClick={() => {
+                                    if (!canMoveRight) return;
+                                    onMoveRight();
+                                    handleDismiss();
+                                }}
+                            >
+                                <ArrowRight size={12} className="tab-color-reset-icon" />
+                                <span>Mover grupo a la derecha</span>
+                            </button>
+                        )}
+                    </div>
+                    <div className="tab-color-menu-divider" />
+                </>
+            )}
 
             {/* Opciones de Desagrupar y Cerrar grupo */}
             <div className="group-menu-actions">

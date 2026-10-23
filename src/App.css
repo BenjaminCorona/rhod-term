@@ -211,6 +211,7 @@ body,
 
 /* Elementos interactivos dentro del header no deben iniciar arrastre de ventana */
 .tab-item,
+.tab-group-pill,
 .btn-new-tab,
 .btn-carousel-nav,
 .header-version,
@@ -219,7 +220,7 @@ body,
   -webkit-app-region: no-drag;
 }
 
-/* Contenedor carrusel para navegación responsiva de pestañas */
+/* Contenedor carrusel para navegación responsiva de pestañas con soporte de arrastre de ventana */
 .tabs-carousel-wrapper {
   flex: 1;
   min-width: 0;
@@ -229,10 +230,12 @@ body,
   height: 100%;
   overflow: hidden;
   position: relative;
+  -webkit-app-region: drag;
 }
 
 .tabs-container {
   flex: 1;
+  -webkit-app-region: drag;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -2074,40 +2077,56 @@ body.dragging-tabs * {
 
 /* Pastilla / Pill del grupo de pestañas */
 .tab-group-pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 8px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 11px;
+  border: none !important;
+  font-size: 12px;
   font-weight: 600;
-  color: #f4f4f5;
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
   flex-shrink: 0;
   margin-right: 4px;
   margin-left: 2px;
-  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+  box-sizing: border-box;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
               background-color 0.16s ease,
-              border-color 0.16s ease,
               opacity 0.16s ease;
   backdrop-filter: blur(8px);
 }
 
 .tab-group-pill:hover {
-  transform: translateY(-0.5px);
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
 .tab-group-pill:active {
-  transform: translateY(0) scale(0.98);
+  cursor: grabbing;
 }
 
 .tab-group-pill.collapsed {
-  padding: 0 7px;
-  opacity: 0.92;
+  padding: 0 8px;
+  opacity: 0.95;
+}
+
+/* Línea de acento superior con el color del grupo */
+.tab-group-top-bar {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+  transition: all 0.18s ease;
+}
+
+.tab-group-pill:hover .tab-group-top-bar {
+  left: 4px;
+  right: 4px;
 }
 
 /* Punto de color del grupo */
@@ -2415,4 +2434,109 @@ body.dragging-tabs * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+
+/* ==========================================================================
+   ANIMACIÓN FLUIDA DE EXPANSIÓN/CONTRACCIÓN & INDICADORES DE GRUPOS
+   ========================================================================== */
+
+/* Pestaña perteneciente a un grupo: soporte para animación accordion */
+.tab-item.tab-in-group {
+  position: relative;
+  transition: max-width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.20s ease,
+              transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Indicador visual de pertenencia al grupo: sutil barra superior en el color del grupo */
+.tab-group-indicator-bar {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
+}
+
+.tab-item.tab-in-group:hover .tab-group-indicator-bar {
+  opacity: 1;
+  left: 6px;
+  right: 6px;
+}
+
+.tab-item.tab-in-group.active .tab-group-indicator-bar {
+  opacity: 1;
+  left: 4px;
+  right: 4px;
+  height: 2.5px;
+}
+
+/* Estado colapsado: animación fluida tipo acordeón que se contrae hacia el pill del grupo */
+.tab-item.is-group-collapsed {
+  max-width: 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-left-width: 0 !important;
+  border-right-width: 0 !important;
+  opacity: 0 !important;
+  transform: scaleX(0.75) translate3d(-8px, 0, 0) !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* ==========================================================================
+   SELECCIÓN MÚLTIPLE DE PESTAÑAS (SHIFT / CMD+CLIC)
+   ========================================================================== */
+.tab-item.is-multi-selected {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.tab-item.is-multi-selected:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.tab-item.is-multi-selected .tab-name {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   ARRASTRE Y REORGANIZACIÓN DE GRUPOS DE PESTAÑAS
+   ========================================================================== */
+.group-pill-drag-icon {
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  transition: color 0.15s ease;
+  margin-right: -1px;
+}
+
+.tab-group-pill:hover .group-pill-drag-icon {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.tab-group-pill.is-dragging {
+  cursor: grabbing !important;
+  opacity: 0.95;
+  z-index: 60 !important;
+}
+
+.group-action-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed !important;
+  pointer-events: none;
 }

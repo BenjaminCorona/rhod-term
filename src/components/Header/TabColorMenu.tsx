@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from "react";
-import { Palette, Check, RotateCcw, Pipette, X, Plus, FolderMinus } from "lucide-react";
+import { Palette, Check, RotateCcw, Pipette, X, Plus, FolderMinus, Trash2 } from "lucide-react";
 import { TabItem, TabGroup } from "../../types";
 import { isValidHexColor, normalizeHexColor } from "../../utils";
 
@@ -7,10 +7,12 @@ interface TabColorMenuProps {
     tab: TabItem;
     position: { x: number; y: number };
     groups?: TabGroup[];
+    selectedCount?: number;
     onClose: () => void;
     onSelectColor: (color: string | undefined) => void;
     onCreateGroup?: (title: string, color: string) => void;
     onAssignGroup?: (groupId: string | undefined) => void;
+    onCloseSelected?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -34,20 +36,20 @@ export function TabColorMenu({
     tab,
     position,
     groups = [],
+    selectedCount = 1,
     onClose,
     onSelectColor,
     onCreateGroup,
     onAssignGroup,
+    onCloseSelected,
 }: TabColorMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const colorInputRef = useRef<HTMLInputElement>(null);
     const [coords, setCoords] = useState({ x: position.x, y: position.y });
     const [isClosing, setIsClosing] = useState(false);
     const [customHex, setCustomHex] = useState(
-        tab.color ? tab.color.replace("#", "").toUpperCase() : "3B82F6"
+        tab.color ? tab.color.replace("#", "").toUpperCase() : ""
     );
-
-    // Estado para crear nuevo grupo directamente desde el menú
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
 
@@ -61,7 +63,7 @@ export function TabColorMenu({
         }, 120);
     }, [isClosing, onClose]);
 
-    // Ajustar posición para no desbordar el viewport
+    // Ajustar posición para que no se salga de la pantalla
     useLayoutEffect(() => {
         if (menuRef.current) {
             const rect = menuRef.current.getBoundingClientRect();
@@ -83,7 +85,7 @@ export function TabColorMenu({
         }
     }, [position.x, position.y]);
 
-    // Cerrar al hacer clic fuera o presionar Escape
+    // Cerrar al presionar Escape o hacer clic fuera
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -106,48 +108,54 @@ export function TabColorMenu({
         };
     }, [handleDismiss]);
 
-    const handleApplyPreset = (hex: string) => {
+    const handleColorClick = (hex: string) => {
         onSelectColor(hex);
-        handleDismiss();
+        setCustomHex(hex.replace("#", "").toUpperCase());
     };
 
     const handleReset = () => {
         onSelectColor(undefined);
+        setCustomHex("");
         handleDismiss();
     };
 
-    const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
-        setCustomHex(raw.toUpperCase());
-        if (raw.length === 6 || raw.length === 3) {
-            const fullHex = normalizeHexColor(raw);
-            if (isValidHexColor(fullHex)) {
-                onSelectColor(fullHex);
-            }
-        }
+    const handleNativeColorPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.toUpperCase();
+        onSelectColor(val);
+        setCustomHex(val.replace("#", ""));
     };
 
-    const handleNativeColorPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const picked = e.target.value.toUpperCase();
-        setCustomHex(picked.replace("#", ""));
-        onSelectColor(picked);
+    const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+        setCustomHex(raw);
+        if (raw.length === 6) {
+            const fullHex = `#${raw}`;
+            if (isValidHexColor(fullHex)) {
+                onSelectColor(normalizeHexColor(fullHex));
+            }
+        }
     };
 
     const handleEyeDropper = async () => {
-        if (!hasEyeDropper) return;
         try {
-            // @ts-ignore
+            // @ts-expect-error - EyeDropper API nativa moderna
             const eyeDropper = new window.EyeDropper();
             const result = await eyeDropper.open();
-            if (result?.sRGBHex) {
+            if (result && result.sRGBHex) {
                 const hex = result.sRGBHex.toUpperCase();
-                setCustomHex(hex.replace("#", ""));
                 onSelectColor(hex);
+                setCustomHex(hex.replace("#", ""));
             }
         } catch {
-            // Usuario canceló la pipeta
+            // Usuario canceló la selección con escape
         }
     };
+
+    const currentGroup = tab.groupId
+        ? groups.find((g) => g.id === tab.groupId)
+        : null;
+
+    const availableGroups = groups.filter((g) => g.id !== tab.groupId);
 
     const handleConfirmCreateGroup = (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,10 +168,9 @@ export function TabColorMenu({
     const activeColor = tab.color?.toUpperCase();
     const currentSwatchColor = isValidHexColor("#" + customHex)
         ? "#" + customHex
-        : tab.color || "#3B82F6";
+        : activeColor || "#3B82F6";
 
-    const currentGroup = groups.find((g) => g.id === tab.groupId);
-    const availableGroups = groups.filter((g) => g.id !== tab.groupId);
+    const isMulti = selectedCount > 1;
 
     return (
         <div
@@ -177,11 +184,15 @@ export function TabColorMenu({
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
         >
-            {/* Cabecera del desplegable */}
+            {/* Cabecera del menú */}
             <div className="tab-color-menu-header">
                 <div className="tab-color-menu-title">
                     <Palette size={13} className="tab-color-menu-icon" />
-                    <span>Color de pestaña</span>
+                    <span>
+                        {isMulti
+                            ? `Color y grupo (${selectedCount} pestañas)`
+                            : "Color de pestaña"}
+                    </span>
                 </div>
                 <button
                     type="button"
@@ -196,7 +207,7 @@ export function TabColorMenu({
             {/* Malla de colores predeterminados */}
             <div className="tab-color-presets-grid">
                 {PRESET_COLORS.map((item) => {
-                    const isSelected = activeColor === item.hex;
+                    const isSelected = activeColor === item.hex.toUpperCase();
                     return (
                         <button
                             key={item.hex}
@@ -209,7 +220,7 @@ export function TabColorMenu({
                                     : undefined,
                             }}
                             title={item.name}
-                            onClick={() => handleApplyPreset(item.hex)}
+                            onClick={() => handleColorClick(item.hex)}
                         >
                             {isSelected && <Check size={11} className="tab-color-check" />}
                         </button>
@@ -223,7 +234,6 @@ export function TabColorMenu({
             <div className="tab-color-custom-section">
                 <span className="tab-color-section-label">Personalizado</span>
                 <div className="tab-color-custom-row">
-                    {/* Botón de muestra con selector nativo oculto */}
                     <div
                         className="tab-color-picker-trigger"
                         style={{ backgroundColor: currentSwatchColor }}
@@ -239,7 +249,6 @@ export function TabColorMenu({
                         />
                     </div>
 
-                    {/* Input manual de Hexadecimal */}
                     <div className="tab-color-hex-field">
                         <span className="tab-color-hex-prefix">#</span>
                         <input
@@ -253,7 +262,6 @@ export function TabColorMenu({
                         />
                     </div>
 
-                    {/* Pipeta cuenta-gotas si el sistema lo soporta */}
                     {hasEyeDropper && (
                         <button
                             type="button"
@@ -286,9 +294,11 @@ export function TabColorMenu({
                 <>
                     <div className="tab-color-menu-divider" />
                     <div className="tab-group-menu-section">
-                        <span className="tab-color-section-label">Grupo de pestañas</span>
+                        <span className="tab-color-section-label">
+                            {isMulti ? "Grupo para las pestañas seleccionadas" : "Grupo de pestañas"}
+                        </span>
 
-                        {currentGroup ? (
+                        {currentGroup && !isMulti ? (
                             <div className="tab-group-current-row">
                                 <div className="tab-group-badge-preview">
                                     <span
@@ -341,15 +351,38 @@ export function TabColorMenu({
                                 onClick={() => setIsCreatingGroup(true)}
                             >
                                 <Plus size={12} />
-                                <span>Añadir a nuevo grupo</span>
+                                <span>
+                                    {isMulti
+                                        ? `Añadir las ${selectedCount} a un nuevo grupo`
+                                        : "Añadir a nuevo grupo"}
+                                </span>
                             </button>
                         )}
 
-                        {/* Lista de otros grupos existentes para añadir o mover */}
+                        {/* Desagrupar todas las seleccionadas si alguna pertenece a un grupo */}
+                        {isMulti && (
+                            <button
+                                type="button"
+                                className="tab-group-action-row-btn"
+                                onClick={() => {
+                                    onAssignGroup(undefined);
+                                    handleDismiss();
+                                }}
+                            >
+                                <FolderMinus size={12} />
+                                <span>Quitar seleccionadas de sus grupos</span>
+                            </button>
+                        )}
+
+                        {/* Lista de grupos existentes para añadir o mover */}
                         {!isCreatingGroup && availableGroups.length > 0 && (
                             <div className="tab-group-existing-list">
                                 <span className="tab-group-sublabel">
-                                    {currentGroup ? "Mover a otro grupo:" : "Añadir a grupo existente:"}
+                                    {currentGroup && !isMulti
+                                        ? "Mover a otro grupo:"
+                                        : isMulti
+                                        ? "Asignar seleccionadas a grupo:"
+                                        : "Añadir a grupo existente:"}
                                 </span>
                                 {availableGroups.map((g) => (
                                     <button
@@ -371,6 +404,24 @@ export function TabColorMenu({
                             </div>
                         )}
                     </div>
+                </>
+            )}
+
+            {/* Opción de cerrar bloque de pestañas si hay selección múltiple */}
+            {isMulti && onCloseSelected && (
+                <>
+                    <div className="tab-color-menu-divider" />
+                    <button
+                        type="button"
+                        className="tab-color-reset-item group-action-btn danger"
+                        onClick={() => {
+                            onCloseSelected();
+                            handleDismiss();
+                        }}
+                    >
+                        <Trash2 size={12} className="tab-color-reset-icon danger" />
+                        <span>Cerrar {selectedCount} pestañas seleccionadas</span>
+                    </button>
                 </>
             )}
         </div>

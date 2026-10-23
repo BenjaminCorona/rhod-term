@@ -30,12 +30,15 @@ export default function App() {
         tabs,
         groups,
         activeTabId,
+        selectedTabIds,
         closingTabIds,
         tabRefs,
         tabCwds,
         setActiveTabId,
+        handleSelectTabWithModifiers,
         handleAddTab,
         handleCloseTab,
+        handleCloseTabs,
         handleCwdUpdate,
         handleReorderTabs,
         handleSetTabColor,
@@ -45,6 +48,9 @@ export default function App() {
         handleUpdateGroup,
         handleUngroupTabs,
         handleCloseGroup,
+        handleReorderGroup,
+        handleMoveGroupToIndex,
+        handleUnifiedDrop,
     } = useTerminalTabs(showToast, (_tabId, cleanPath) => {
         refreshContext(cleanPath);
     });
@@ -124,10 +130,12 @@ export default function App() {
         modSymbol,
         isMac,
         activeTabId,
+        selectedTabIds,
         tabsCount: tabs.length,
         tabRefs,
         onAddTab: handleAddTab,
         onCloseTab: (id) => handleCloseTab(id),
+        onCloseTabs: handleCloseTabs,
         onSelectTab: handleSelectTabByIndex,
         onTogglePalette: (tab) => handleOpenSettings(tab || "atajos"),
         onClosePalette: handleCloseSettings,
@@ -147,7 +155,11 @@ export default function App() {
                     handleAddTab();
                     break;
                 case "close-tab":
-                    handleCloseTab(activeTabId);
+                    if (selectedTabIds && selectedTabIds.size > 1) {
+                        handleCloseTabs(Array.from(selectedTabIds));
+                    } else {
+                        handleCloseTab(activeTabId);
+                    }
                     break;
                 case "clear":
                     handleClear();
@@ -206,12 +218,15 @@ export default function App() {
                 tabs={tabs}
                 groups={groups}
                 activeTabId={activeTabId}
+                selectedTabIds={selectedTabIds}
                 closingTabIds={closingTabIds}
                 appVersion={appVersion}
                 modSymbol={modSymbol}
                 isMac={isMac}
                 onSelectTab={setActiveTabId}
+                onSelectTabWithModifiers={handleSelectTabWithModifiers}
                 onCloseTab={handleCloseTab}
+                onCloseTabs={handleCloseTabs}
                 onAddTab={handleAddTab}
                 onReorderTabs={handleReorderTabs}
                 onSetTabColor={handleSetTabColor}
@@ -221,6 +236,9 @@ export default function App() {
                 onUpdateGroup={handleUpdateGroup}
                 onUngroupTabs={handleUngroupTabs}
                 onCloseGroup={handleCloseGroup}
+                onReorderGroup={handleReorderGroup}
+                onMoveGroupToIndex={handleMoveGroupToIndex}
+                onUnifiedDrop={handleUnifiedDrop}
                 onCopyVersion={() => {
                     navigator.clipboard.writeText(`v${appVersion}`);
                     showToast(`Versión v${appVersion} copiada`);
