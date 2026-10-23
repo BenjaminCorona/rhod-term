@@ -83,6 +83,22 @@ export function useTerminalTabs(
     const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
         () => new Set([initialState.activeTabId])
     );
+    const [unbundlingTabIds, setUnbundlingTabIds] = useState<Set<string>>(new Set());
+    const unbundlingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const triggerUnbundleAnimation = useCallback((bundleIds: string[]) => {
+        if (bundleIds.length > 1) {
+            if (unbundlingTimeoutRef.current) {
+                clearTimeout(unbundlingTimeoutRef.current);
+            }
+            setUnbundlingTabIds(new Set(bundleIds));
+            // Duración ampliada para permitir que el abanico escalonado complete su recorrido suavemente
+            const duration = 520;
+            unbundlingTimeoutRef.current = setTimeout(() => {
+                setUnbundlingTabIds(new Set());
+            }, duration);
+        }
+    }, []);
     const lastSelectedTabIdRef = useRef<string>(initialState.activeTabId);
     const tabRefs = useRef<Record<string, TerminalHandle | null>>({});
     const [tabCwds, setTabCwds] = useState<Record<string, string>>(initialState.tabCwds);
@@ -265,10 +281,10 @@ export function useTerminalTabs(
         });
     }, []);
 
-    // Reordenamiento unificado e interactivo de pestañas y pastillas de grupos
+    // Reordenamiento unificado e interactivo de pestañas (individuales o en bloque múltiple) y pastillas de grupos
     const handleUnifiedDrop = useCallback(
         (
-            from: { type: "tab" | "group"; id: string },
+            from: { type: "tab" | "group"; id: string; ids?: string[] },
             to: { type: "tab" | "group"; id: string },
             isMovingRight: boolean
         ) => {
@@ -276,17 +292,21 @@ export function useTerminalTabs(
 
             setTabs((prev) => {
                 if (from.type === "tab") {
-                    const fromTab = prev.find((t) => t.id === from.id);
-                    if (!fromTab) return prev;
+                    const bundleIds = from.ids && from.ids.length > 1 ? from.ids : [from.id];
+                    const bundleIdSet = new Set(bundleIds);
 
-                    const withoutFrom = prev.filter((t) => t.id !== from.id);
-                    let targetGroupId = fromTab.groupId;
+                    // Conservar el orden relativo original de las pestañas seleccionadas
+                    const bundleTabs = prev.filter((t) => bundleIdSet.has(t.id));
+                    if (bundleTabs.length === 0) return prev;
+
+                    const withoutBundle = prev.filter((t) => !bundleIdSet.has(t.id));
+                    let targetGroupId: string | undefined = undefined;
                     let insertIndex = 0;
 
                     if (to.type === "tab") {
-                        const toIndex = withoutFrom.findIndex((t) => t.id === to.id);
+                        const toIndex = withoutBundle.findIndex((t) => t.id === to.id);
                         if (toIndex === -1) return prev;
-                        const toTab = withoutFrom[toIndex];
+                        const toTab = withoutBundle[toIndex];
                         const toGroup = toTab.groupId ? groups.find((g) => g.id === toTab.groupId) : null;
 
                         // Solo unirse al grupo si el grupo de la pestaña destino está abierto/expandido
@@ -306,36 +326,64 @@ export function useTerminalTabs(
                             targetGroupId = undefined;
                             if (isMovingRight) {
                                 // Se arrastró hacia la derecha pasando el grupo cerrado: colocar DESPUÉS de todo el grupo
-                                const lastGroupTabIdx = withoutFrom.map((t) => t.groupId).lastIndexOf(to.id);
-                                insertIndex = lastGroupTabIdx !== -1 ? lastGroupTabIdx + 1 : withoutFrom.length;
+                                const lastGroupTabIdx = withoutBundle.map((t) => t.groupId).lastIndexOf(to.id);
+                                insertIndex = lastGroupTabIdx !== -1 ? lastGroupTabIdx + 1 : withoutBundle.length;
                             } else {
                                 // Se arrastró hacia la izquierda antes del grupo cerrado: colocar ANTES de todo el grupo
-                                const firstGroupTabIdx = withoutFrom.findIndex((t) => t.groupId === to.id);
+                                const firstGroupTabIdx = withoutBundle.findIndex((t) => t.groupId === to.id);
                                 insertIndex = firstGroupTabIdx !== -1 ? firstGroupTabIdx : 0;
                             }
                         } else {
                             // El grupo está ABIERTO/EXPANDIDO:
-                            const groupFirstTabIdx = withoutFrom.findIndex((t) => t.groupId === to.id);
+                            const groupFirstTabIdx = withoutBundle.findIndex((t) => t.groupId === to.id);
+
                             if (isMovingRight) {
+                                // Se arrastró hacia la derecha entrando al grupo: todas se unen al grupo
                                 targetGroupId = to.id;
-                                insertIndex = groupFirstTabIdx !== -1 ? groupFirstTabIdx : withoutFrom.length;
+                                insertIndex = groupFirstTabIdx !== -1 ? groupFirstTabIdx : withoutBundle.length;
                             } else {
+                                // Se arrastró hacia la izquierda saliendo de la pastilla: SE DESAGRUPAN DEL GRUPO y quedan antes del grupo
                                 targetGroupId = undefined;
-                                insertIndex = groupFirstTabIdx !== -1 ? Math.max(0, groupFirstTabIdx) : 0;
+                                insertIndex = groupFirstTabIdx !== -1 ? groupFirstTabIdx : 0;
                             }
                         }
                     }
 
-                    const updatedTab: TabItem = {
-                        ...fromTab,
+                    const updatedBundleTabs = bundleTabs.map((t) => ({
+                        ...t,
                         groupId: targetGroupId,
                         color: targetGroupId
-                            ? (groups.find((g) => g.id === targetGroupId)?.color || fromTab.color)
-                            : fromTab.color,
-                    };
+                            ? (groups.find((g) => g.id === targetGroupId)?.color || t.color)
+                            : (t.groupId ? undefined : t.color),
+                    }));
 
-                    const result = [...withoutFrom];
-                    result.splice(Math.max(0, Math.min(insertIndex, result.length)), 0, updatedTab);
+                    const result = [...withoutBundle];
+                    result.splice(Math.max(0, Math.min(insertIndex, result.length)), 0, ...updatedBundleTabs);
+
+                    // Desagrupar al soltar: dejar activa la pestaña líder en su nueva ubicación
+                    setSelectedTabIds(new Set([from.id]));
+                    setActiveTabId(from.id);
+                    lastSelectedTabIdRef.current = from.id;
+
+                    // Activar animación suave de desagrupamiento y expansión elástica
+                    triggerUnbundleAnimation(bundleIds);
+
+                    // Notificación Toast informativa
+                    if (targetGroupId) {
+                        const grp = groups.find((g) => g.id === targetGroupId);
+                        showToast(
+                            bundleTabs.length === 1
+                                ? `Pestaña añadida a "${grp?.title || "Grupo"}"`
+                                : `${bundleTabs.length} pestañas añadidas a "${grp?.title || "Grupo"}"`
+                        );
+                    } else if (bundleTabs.some((t) => t.groupId)) {
+                        showToast(
+                            bundleTabs.length === 1
+                                ? "Pestaña quitada del grupo"
+                                : `${bundleTabs.length} pestañas quitadas del grupo`
+                        );
+                    }
+
                     return result;
                 } else {
                     // from.type === "group" (se arrastró el pill del grupo completo)
@@ -690,6 +738,8 @@ export function useTerminalTabs(
         activeTabId,
         selectedTabIds,
         closingTabIds,
+        unbundlingTabIds,
+        triggerUnbundleAnimation,
         tabRefs,
         tabCwds,
         setActiveTabId,

@@ -7,6 +7,7 @@ import { TabColorMenu } from "./TabColorMenu";
 import { TabGroupPill } from "./TabGroupPill";
 import { GroupContextMenu } from "./GroupContextMenu";
 import { WindowControls } from "./WindowControls";
+import { TabBundleItem, BarItemBundle } from "./TabBundleItem";
 
 interface HeaderProps {
     tabs: TabItemType[];
@@ -26,7 +27,7 @@ interface HeaderProps {
     onAddTab: () => void;
     onReorderTabs: (fromIndex: number, toIndex: number) => void;
     onUnifiedDrop?: (
-        from: { type: "tab" | "group"; id: string },
+        from: { type: "tab" | "group"; id: string; ids?: string[] },
         to: { type: "tab" | "group"; id: string },
         isMovingRight: boolean
     ) => void;
@@ -41,6 +42,8 @@ interface HeaderProps {
     onReorderGroup?: (groupId: string, direction: "left" | "right") => void;
     onMoveGroupToIndex?: (groupId: string, targetIndex: number) => void;
     closingTabIds?: Set<string>;
+    unbundlingTabIds?: Set<string>;
+    onTriggerUnbundleAnimation?: (tabIds: string[]) => void;
 }
 
 interface DragState {
@@ -54,6 +57,11 @@ interface DragState {
     targetIndex: number;
     minDelta: number;
     maxDelta: number;
+    isBundle?: boolean;
+    bundleIds?: string[];
+    leadTabId?: string;
+    bundleOffsets?: Record<string, number>;
+    needsRemergeMeasure?: boolean;
 }
 
 interface BarItemTab {
@@ -74,7 +82,7 @@ interface BarItemGroup {
     tabCount: number;
 }
 
-type BarItem = BarItemTab | BarItemGroup;
+type BarItem = BarItemTab | BarItemGroup | BarItemBundle;
 
 export function Header({
     tabs,
@@ -102,6 +110,8 @@ export function Header({
     onReorderGroup,
     onMoveGroupToIndex: _onMoveGroupToIndex,
     closingTabIds,
+    unbundlingTabIds,
+    onTriggerUnbundleAnimation,
 }: HeaderProps) {
     const tabsContainerRef = useRef<HTMLDivElement>(null);
     const [dragState, setDragState] = useState<DragState | null>(null);
@@ -118,10 +128,22 @@ export function Header({
         y: number;
     } | null>(null);
 
-    // Estructura lineal unificada de elementos en la barra (pestañas y pastillas de grupos)
+    // Solo se agrupan visualmente en un único bundle cuando se inicia el arrastre (drag)
+    const isBundledDuringDrag = Boolean(
+        dragState?.isDragging &&
+        dragState?.isBundle &&
+        dragState?.bundleIds &&
+        dragState.bundleIds.length > 1
+    );
+
+    // Estructura lineal unificada de elementos en la barra (pestañas, pastillas de grupos y bundle durante drag)
     const barItems = useMemo<BarItem[]>(() => {
         const items: BarItem[] = [];
         const renderedPillIds = new Set<string>();
+
+        const bundleActive = isBundledDuringDrag;
+        const bundleSet = bundleActive && dragState?.bundleIds ? new Set(dragState.bundleIds) : null;
+        let hasRenderedBundle = false;
 
         tabs.forEach((tab) => {
             if (tab.groupId && !renderedPillIds.has(tab.groupId)) {
@@ -140,6 +162,34 @@ export function Header({
                 }
             }
 
+            // Solo se colapsan en una sola pestaña agrupada cuando el usuario está arrastrando el lote
+            if (bundleSet && bundleSet.has(tab.id)) {
+                if (!hasRenderedBundle) {
+                    hasRenderedBundle = true;
+                    const bundleTabs = tabs.filter((t) => bundleSet.has(t.id));
+                    const leadId = dragState?.leadTabId || activeTabId;
+                    const leadTab = bundleTabs.find((t) => t.id === leadId) || bundleTabs[0];
+                    const allInSameGroup = bundleTabs.every((t) => t.groupId === leadTab.groupId);
+                    const bundleGroupId = allInSameGroup ? leadTab.groupId : undefined;
+                    const isBundleCollapsed = bundleGroupId
+                        ? Boolean(groups.find((g) => g.id === bundleGroupId)?.collapsed)
+                        : false;
+
+                    items.push({
+                        type: "bundle",
+                        id: leadTab.id,
+                        key: `bundle-${leadTab.id}`,
+                        leadTab,
+                        tabs: bundleTabs,
+                        tabIds: bundleTabs.map((t) => t.id),
+                        groupId: bundleGroupId,
+                        isGroupCollapsed: isBundleCollapsed,
+                        initialOffsets: dragState?.bundleOffsets,
+                    });
+                }
+                return;
+            }
+
             const g = tab.groupId ? groups.find((gr) => gr.id === tab.groupId) : null;
             const isCollapsed = Boolean(g?.collapsed);
 
@@ -154,7 +204,7 @@ export function Header({
         });
 
         return items;
-    }, [tabs, groups]);
+    }, [tabs, groups, isBundledDuringDrag, dragState?.bundleIds, activeTabId]);
 
     // Elementos visibles actualmente en el track (excluye pestañas dentro de grupos colapsados)
     const visibleBarItems = useMemo<BarItem[]>(() => {
@@ -163,6 +213,11 @@ export function Header({
             return !item.isGroupCollapsed;
         });
     }, [barItems]);
+
+    const visibleBarItemsRef = useRef(visibleBarItems);
+    useEffect(() => {
+        visibleBarItemsRef.current = visibleBarItems;
+    }, [visibleBarItems]);
 
     // Detección sutil de apertura de nueva pestaña para animación estilo Apple
     const [newTabId, setNewTabId] = useState<string | null>(null);
@@ -325,6 +380,22 @@ export function Header({
                 maxDelta = lastRect.right - draggedRect.right;
             }
 
+            const clickedItem = visibleBarItems[visibleIndex];
+            let isBundle = false;
+            let bundleIds: string[] = [];
+            let leadTabId: string | undefined = undefined;
+
+            if (clickedItem && clickedItem.type === "tab") {
+                leadTabId = clickedItem.tab.id;
+                // Si la pestaña forma parte de una selección múltiple existente:
+                if (selectedTabIds.has(clickedItem.tab.id) && selectedTabIds.size > 1) {
+                    isBundle = true;
+                    bundleIds = tabs.filter((t) => selectedTabIds.has(t.id)).map((t) => t.id);
+                } else {
+                    bundleIds = [clickedItem.tab.id];
+                }
+            }
+
             const state: DragState = {
                 dragIndex: visibleIndex,
                 startX: e.clientX,
@@ -336,6 +407,9 @@ export function Header({
                 targetIndex: visibleIndex,
                 minDelta,
                 maxDelta,
+                isBundle,
+                bundleIds,
+                leadTabId,
             };
 
             dragStateRef.current = state;
@@ -348,12 +422,72 @@ export function Header({
 
                 if (!s.isDragging && Math.abs(deltaX) > 4) {
                     s.isDragging = true;
+                    if (s.isBundle && s.bundleIds) {
+                        const leadId = s.leadTabId || tabs.find((t) => s.bundleIds?.includes(t.id))?.id;
+                        const leadItemIdx = visibleBarItems.findIndex(
+                            (it) => it.type === "tab" && it.tab.id === leadId
+                        );
+                        const leadRect = leadItemIdx !== -1 ? s.rects[leadItemIdx] : null;
+
+                        const bundleOffsets: Record<string, number> = {};
+                        if (leadRect) {
+                            s.bundleIds.forEach((id) => {
+                                const idx = visibleBarItems.findIndex(
+                                    (it) => it.type === "tab" && it.tab.id === id
+                                );
+                                if (idx !== -1 && s.rects[idx]) {
+                                    bundleOffsets[id] = s.rects[idx].left - leadRect.left;
+                                }
+                            });
+                        }
+                        s.bundleOffsets = bundleOffsets;
+
+                        if (leadItemIdx !== -1) {
+                            s.dragIndex = leadItemIdx;
+                            s.targetIndex = leadItemIdx;
+                        }
+                        s.needsRemergeMeasure = true;
+                    }
                     document.body.classList.add("dragging-tabs");
+                    setDragState({ ...s });
                 }
 
                 if (s.isDragging) {
                     moveEvent.preventDefault();
                     window.getSelection()?.removeAllRanges();
+
+                    if (s.needsRemergeMeasure) {
+                        const scrollContainer = tabsContainerRef.current;
+                        if (scrollContainer) {
+                            const bundleEl = scrollContainer.querySelector<HTMLElement>(".tab-bundle-item");
+                            if (bundleEl) {
+                                const trackElements = Array.from(
+                                    scrollContainer.querySelectorAll<HTMLElement>(".tabs-track-item:not(.is-group-collapsed)")
+                                );
+                                if (trackElements.length > 0) {
+                                    s.rects = trackElements.map((el) => {
+                                        const r = el.getBoundingClientRect();
+                                        return {
+                                            left: r.left,
+                                            right: r.right,
+                                            width: r.width,
+                                            center: r.left + r.width / 2,
+                                        };
+                                    });
+                                    const bundleElIndex = trackElements.indexOf(bundleEl);
+                                    if (bundleElIndex !== -1) {
+                                        s.dragIndex = bundleElIndex;
+                                        s.targetIndex = bundleElIndex;
+                                        const draggedRect = s.rects[bundleElIndex];
+                                        s.draggedWidth = draggedRect.width;
+                                        s.minDelta = s.rects[0].left - draggedRect.left;
+                                        s.maxDelta = s.rects[s.rects.length - 1].right - draggedRect.right;
+                                        s.needsRemergeMeasure = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     const scrollContainer = tabsContainerRef.current;
                     if (scrollContainer) {
@@ -365,10 +499,10 @@ export function Header({
                         }
                     }
 
-                    const clampedDelta = Math.max(
-                        s.minDelta,
-                        Math.min(s.maxDelta, deltaX)
-                    );
+                    const clampedDelta =
+                        s.minDelta !== 0 || s.maxDelta !== 0
+                            ? Math.max(s.minDelta, Math.min(s.maxDelta, deltaX))
+                            : deltaX;
                     s.deltaX = clampedDelta;
 
                     const currentCenterX =
@@ -423,24 +557,58 @@ export function Header({
                 document.body.classList.remove("dragging-tabs");
                 window.getSelection()?.removeAllRanges();
 
-                if (s && s.isDragging && s.targetIndex !== s.dragIndex) {
-                    const fromItem = visibleBarItems[s.dragIndex];
-                    const toItem = visibleBarItems[s.targetIndex];
-                    const isMovingRight = s.targetIndex > s.dragIndex;
+                if (s && s.isDragging) {
+                    if (s.targetIndex !== s.dragIndex) {
+                        const currentVisible = visibleBarItemsRef.current;
+                        const fromItem = currentVisible[s.dragIndex];
+                        const toItem = currentVisible[s.targetIndex];
+                        const isMovingRight = s.targetIndex > s.dragIndex;
 
-                    if (fromItem && toItem) {
-                        if (onUnifiedDrop) {
-                            onUnifiedDrop(
-                                { type: fromItem.type, id: fromItem.id },
-                                { type: toItem.type, id: toItem.id },
-                                isMovingRight
-                            );
-                        } else if (fromItem.type === "tab" && toItem.type === "tab") {
-                            const fromIndex = tabs.findIndex((t) => t.id === fromItem.id);
-                            const toIndex = tabs.findIndex((t) => t.id === toItem.id);
-                            if (fromIndex !== -1 && toIndex !== -1) {
-                                onReorderTabs(fromIndex, toIndex);
+                        if (fromItem && toItem) {
+                            if (onUnifiedDrop) {
+                                const fromPayload =
+                                    fromItem.type === "bundle"
+                                        ? {
+                                              type: "tab" as const,
+                                              id: fromItem.leadTab.id,
+                                              ids: fromItem.tabIds,
+                                          }
+                                        : {
+                                              type: fromItem.type as "tab" | "group",
+                                              id: fromItem.id,
+                                              ids: s.isBundle ? s.bundleIds : undefined,
+                                          };
+
+                                const toPayload =
+                                    toItem.type === "bundle"
+                                        ? {
+                                              type: "tab" as const,
+                                              id: toItem.leadTab.id,
+                                          }
+                                        : {
+                                              type: toItem.type as "tab" | "group",
+                                              id: toItem.id,
+                                          };
+
+                                onUnifiedDrop(fromPayload, toPayload, isMovingRight);
+                            } else if (fromItem.type !== "group" && toItem.type !== "group") {
+                                const fromId = fromItem.type === "bundle" ? fromItem.leadTab.id : fromItem.id;
+                                const toId = toItem.type === "bundle" ? toItem.leadTab.id : toItem.id;
+                                const fromIndex = tabs.findIndex((t) => t.id === fromId);
+                                const toIndex = tabs.findIndex((t) => t.id === toId);
+                                if (fromIndex !== -1 && toIndex !== -1) {
+                                    onReorderTabs(fromIndex, toIndex);
+                                }
                             }
+                        }
+                    } else {
+                        // Si se soltó en la misma posición, desagrupar con animación
+                        if (s.isBundle && s.bundleIds && s.bundleIds.length > 1) {
+                            onTriggerUnbundleAnimation?.(s.bundleIds);
+                        }
+                        const fromItem = visibleBarItems[s.dragIndex];
+                        if (fromItem && fromItem.type === "bundle") {
+                            onSelectTab(fromItem.leadTab.id);
                         }
                     }
                 }
@@ -453,7 +621,16 @@ export function Header({
             window.addEventListener("pointerup", handlePointerUp);
             window.addEventListener("pointercancel", handlePointerUp);
         },
-        [visibleBarItems, tabs, isMac, onUnifiedDrop, onReorderTabs]
+        [
+            visibleBarItems,
+            tabs,
+            isMac,
+            onUnifiedDrop,
+            onReorderTabs,
+            selectedTabIds,
+            onSelectTabWithModifiers,
+            activeTabId,
+        ]
     );
 
     // Determinar si el grupo seleccionado en el menú puede moverse a izquierda o derecha
@@ -560,7 +737,9 @@ export function Header({
                             const isBeingDragged =
                                 !isItemCollapsed &&
                                 Boolean(dragState?.isDragging) &&
-                                dragState?.dragIndex === visibleIdx;
+                                (item.type === "bundle"
+                                    ? true
+                                    : dragState?.dragIndex === visibleIdx);
 
                             if (dragState?.isDragging && !isItemCollapsed && visibleIdx !== -1) {
                                 if (isBeingDragged) {
@@ -635,6 +814,43 @@ export function Header({
                                 );
                             }
 
+                            if (item.type === "bundle") {
+                                const group = item.groupId
+                                    ? groups.find((g) => g.id === item.groupId)
+                                    : null;
+
+                                return (
+                                    <TabBundleItem
+                                        key={item.key}
+                                        bundle={item}
+                                        isDragging={isBeingDragged}
+                                        style={itemStyle}
+                                        groupColor={group?.color}
+                                        onPointerDown={(e) => {
+                                            if (!isItemCollapsed && visibleIdx !== -1) {
+                                                handlePointerDown(visibleIdx, e);
+                                            }
+                                        }}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (dragState?.isDragging) return;
+                                            setColorMenu(null);
+                                            setGroupMenu(null);
+                                        }}
+                                        onClick={() => {
+                                            if (dragState?.isDragging) return;
+                                            // Clic en la pestaña agrupada: desagrupar y activar pestaña principal con animación
+                                            onTriggerUnbundleAnimation?.(item.tabIds);
+                                            onSelectTab(item.leadTab.id);
+                                        }}
+                                        onClose={() => {
+                                            onCloseTabs?.(item.tabIds);
+                                        }}
+                                    />
+                                );
+                            }
+
                             // Renderizado de pestaña (TabItem)
                             const tab = item.tab;
                             const group = tab.groupId
@@ -642,14 +858,36 @@ export function Header({
                                 : null;
                             const tabOverallIndex = tabs.findIndex((t) => t.id === tab.id);
 
+                            const isAnchorBeingDragged = isBeingDragged;
+                            const isBundleFollower =
+                                Boolean(dragState?.isDragging) &&
+                                Boolean(dragState?.isBundle) &&
+                                Boolean(dragState?.bundleIds?.includes(tab.id)) &&
+                                !isAnchorBeingDragged;
+                            const isBundleLeader = isAnchorBeingDragged && Boolean(dragState?.isBundle);
+                            const dragBundleCount = dragState?.bundleIds?.length || 0;
+
+                            const isUnbundling = Boolean(unbundlingTabIds?.has(tab.id));
+                            let unbundleIndex = 0;
+                            if (isUnbundling && unbundlingTabIds) {
+                                const unbundleList = tabs.filter((t) => unbundlingTabIds.has(t.id));
+                                unbundleIndex = unbundleList.findIndex((t) => t.id === tab.id);
+                                if (unbundleIndex === -1) unbundleIndex = 0;
+                            }
+
                             return (
                                 <TabItem
                                     key={item.key}
                                     tab={tab}
                                     index={tabOverallIndex !== -1 ? tabOverallIndex : 0}
                                     isActive={tab.id === activeTabId}
-                                    isMultiSelected={selectedTabIds.has(tab.id)}
+                                    isMultiSelected={selectedTabIds.has(tab.id) && selectedTabIds.size > 1}
                                     isGroupCollapsed={isItemCollapsed}
+                                    isBundleLeader={isBundleLeader}
+                                    isBundleFollower={isBundleFollower}
+                                    dragBundleCount={dragBundleCount}
+                                    isUnbundling={isUnbundling}
+                                    unbundleIndex={unbundleIndex}
                                     groupColor={group?.color}
                                     groupTitle={group?.title}
                                     modSymbol={modSymbol}

@@ -363,9 +363,9 @@ body.dragging-tabs * {
 
 /* Pestaña activa (Cápsula Chrome: acento azul profundo con borde nítido) */
 .tab-item.active {
-  background: rgba(14, 50, 88, 0.72);
-  border: 1px solid transparent;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  background: #122d52;
+  border: 1px solid #2563eb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   color: #ffffff;
 }
 
@@ -2500,19 +2500,351 @@ body.dragging-tabs * {
    SELECCIÓN MÚLTIPLE DE PESTAÑAS (SHIFT / CMD+CLIC)
    ========================================================================== */
 .tab-item.is-multi-selected {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: #1b355e !important;
+  border: 1px solid #3b82f6 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+  color: #ffffff !important;
 }
 
 .tab-item.is-multi-selected:hover {
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: #234375 !important;
+  border-color: #60a5fa !important;
 }
 
 .tab-item.is-multi-selected .tab-name {
   color: #ffffff;
   font-weight: 600;
+}
+
+.tab-item.is-multi-selected .tab-icon {
+  color: #60a5fa !important;
+  opacity: 1;
+}
+
+/* Barra de acento inferior en pestañas seleccionadas en bloque */
+.tab-multi-select-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.85);
+  pointer-events: none;
+}
+
+/* Insignia de check ✓ cuando está en selección múltiple */
+.tab-multi-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  margin-left: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.45);
+}
+
+/* ==========================================================================
+   PESTAÑA AGRUPADA VISUALMENTE (COLLAPSED BUNDLE) & ANIMACIONES (MEDIO SEGUNDO)
+   ========================================================================== */
+
+.tab-bundle-item {
+  position: relative;
+  background: #0f2747 !important;
+  border: 1px solid #3b82f6 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+  color: #ffffff !important;
+  cursor: grab;
+  user-select: none;
+  z-index: 5;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.tab-bundle-item:hover {
+  background: #14335c !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Estado mientras se arrastra la pestaña agrupada */
+.tab-bundle-item.is-dragging {
+  cursor: grabbing !important;
+  z-index: 95 !important;
+  background: #0f2747 !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Pestañas seleccionadas fusionándose físicamente hacia la pestaña líder (0.48s, sólida y opaca) */
+.bundle-fusing-follower {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 30px;
+  width: 135px;
+  max-width: 175px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #112d52;
+  border: 1px solid #3b82f6;
+  color: #ffffff;
+  pointer-events: none;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  animation: fuseFollowerSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.bundle-fusing-follower .tab-icon {
+  color: var(--tab-accent-color, #60a5fa);
+  flex-shrink: 0;
+}
+
+.bundle-fusing-follower .bundle-fusing-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+/* Desplazamiento limpio y sólido hacia la pestaña líder */
+@keyframes fuseFollowerSmooth {
+  0% {
+    transform: translate3d(var(--initial-offset-x, 0px), 0, 0) scale(1);
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.92);
+    opacity: 0;
+  }
+}
+
+/* Capas 3D que representan las cartas/pestañas colapsadas en la pila (sólidas y opacas) */
+.bundle-stack-layer {
+  position: absolute;
+  border-radius: 6px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Capa trasera (más profunda) */
+.bundle-layer-back {
+  top: -6px;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  background: #142238;
+  border: 1px solid #284166;
+  z-index: -2;
+  animation: layerBackSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Capa intermedia */
+.bundle-layer-mid {
+  top: -3px;
+  left: 5px;
+  right: 5px;
+  bottom: 0;
+  background: #192e4e;
+  border: 1px solid #365682;
+  z-index: -1;
+  animation: layerMidSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes layerBackSmooth {
+  0% {
+    transform: translate3d(14px, 4px, 0) scale(0.92);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes layerMidSmooth {
+  0% {
+    transform: translate3d(8px, 2px, 0) scale(0.96);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Contenido frontal de la pestaña agrupada */
+.tab-bundle-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+  animation: bundleContentSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform;
+}
+
+@keyframes bundleContentSmooth {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Insignia numérica */
+.tab-bundle-count-pill {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 7px;
+  line-height: 15px;
+  margin-left: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  animation: countPillSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes countPillSmooth {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   DESAGRUPAMIENTO SUAVE Y EXPANSIÓN FÍSICA SÓLIDA (0.48s, OPACA)
+   ========================================================================== */
+
+.tab-item.is-unbundling {
+  animation: tabUnbundleSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  will-change: transform, opacity;
+  z-index: 10;
+}
+
+@keyframes tabUnbundleSmooth {
+  from {
+    opacity: 0.9;
+    /* Cada pestaña inicia colapsada físicamente en la posición de la primera pestaña del lote */
+    transform: translate3d(calc(var(--unbundle-index, 0) * -110px), 0, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.tab-bundle-icon {
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.tab-bundle-title {
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+
+
+/* Insignia numérica del lote de pestañas arrastrado juntas */
+.tab-bundle-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 1px 7px;
+  line-height: 15px;
+  margin-left: 4px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.55);
+  flex-shrink: 0;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: -0.01em;
+}
+
+/* Pestaña cabecera que lidera el arrastre en lote: elevación y cartas apiladas detrás */
+.tab-item.is-bundle-leader {
+  z-index: 85 !important;
+  transform: scale(1.03) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65) !important;
+  background: #112d52 !important;
+}
+
+.tab-item.is-bundle-leader::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: 5px;
+  left: 5px;
+  bottom: 0;
+  background: #192e4e;
+  border: 1px solid #365682;
+  border-radius: 6px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.tab-item.is-bundle-leader::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  left: 10px;
+  bottom: 0;
+  background: #142238;
+  border: 1px solid #284166;
+  border-radius: 6px;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* Pestañas compañeras del lote durante el arrastre: atenuación suave con borde punteado */
+.tab-item.is-bundle-follower {
+  opacity: 0.30 !important;
+  transform: scale(0.95) !important;
+  filter: saturate(0.5) !important;
+  border: 1px dashed rgba(96, 165, 250, 0.5) !important;
+  pointer-events: none !important;
+  transition: opacity 0.18s ease, transform 0.18s ease !important;
 }
 
 /* ==========================================================================

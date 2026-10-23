@@ -32,6 +32,8 @@ export default function App() {
         activeTabId,
         selectedTabIds,
         closingTabIds,
+        unbundlingTabIds,
+        triggerUnbundleAnimation,
         tabRefs,
         tabCwds,
         setActiveTabId,
@@ -220,6 +222,8 @@ export default function App() {
                 activeTabId={activeTabId}
                 selectedTabIds={selectedTabIds}
                 closingTabIds={closingTabIds}
+                unbundlingTabIds={unbundlingTabIds}
+                onTriggerUnbundleAnimation={triggerUnbundleAnimation}
                 appVersion={appVersion}
                 modSymbol={modSymbol}
                 isMac={isMac}

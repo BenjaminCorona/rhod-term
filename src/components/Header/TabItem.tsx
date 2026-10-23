@@ -13,6 +13,11 @@ interface TabItemProps {
     isClosing?: boolean;
     isMultiSelected?: boolean;
     isGroupCollapsed?: boolean;
+    isBundleLeader?: boolean;
+    isBundleFollower?: boolean;
+    dragBundleCount?: number;
+    isUnbundling?: boolean;
+    unbundleIndex?: number;
     groupColor?: string;
     groupTitle?: string;
     style?: React.CSSProperties;
@@ -32,6 +37,11 @@ export function TabItem({
     isClosing = false,
     isMultiSelected = false,
     isGroupCollapsed = false,
+    isBundleLeader = false,
+    isBundleFollower = false,
+    dragBundleCount,
+    isUnbundling = false,
+    unbundleIndex = 0,
     groupColor,
     groupTitle,
     style,
@@ -49,9 +59,14 @@ export function TabItem({
           } as React.CSSProperties)
         : {};
 
+    const unbundleStyle = isUnbundling
+        ? ({ "--unbundle-index": unbundleIndex } as React.CSSProperties)
+        : {};
+
     const combinedStyle: React.CSSProperties = {
         ...style,
         ...customColorStyles,
+        ...unbundleStyle,
     };
 
     return (
@@ -64,7 +79,9 @@ export function TabItem({
                 isMultiSelected ? "is-multi-selected" : ""
             } ${groupColor ? "tab-in-group" : ""} ${
                 isGroupCollapsed ? "is-group-collapsed" : ""
-            }`}
+            } ${isBundleLeader ? "is-bundle-leader" : ""} ${
+                isBundleFollower ? "is-bundle-follower" : ""
+            } ${isUnbundling ? "is-unbundling" : ""}`}
             style={combinedStyle}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
@@ -85,6 +102,11 @@ export function TabItem({
                 />
             )}
 
+            {/* Barra de acento inferior para pestañas seleccionadas en bloque */}
+            {isMultiSelected && (
+                <div className="tab-multi-select-indicator" />
+            )}
+
             <TerminalIcon
                 size={12}
                 className="tab-icon"
@@ -97,6 +119,15 @@ export function TabItem({
                 />
             )}
             <span className="tab-name">{tab.title}</span>
+            {isBundleLeader && dragBundleCount && dragBundleCount > 1 ? (
+                <span className="tab-bundle-badge" title={`${dragBundleCount} pestañas en movimiento`}>
+                    {dragBundleCount} pestañas
+                </span>
+            ) : isMultiSelected ? (
+                <span className="tab-multi-selected-badge" title="Pestaña seleccionada en bloque (Shift/Cmd)">
+                    ✓
+                </span>
+            ) : null}
             {isNumbered && (
                 <span className="tab-shortcut-badge">
                     {modSymbol}
