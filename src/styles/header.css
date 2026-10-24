@@ -10,7 +10,7 @@
   justify-content: space-between;
   padding: 0 12px 0 0;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 80;
   -webkit-app-region: drag;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
