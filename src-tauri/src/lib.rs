@@ -3,6 +3,7 @@ pub mod context;
 pub mod error;
 pub mod pty;
 pub mod state;
+pub mod storage;
 
 use state::AppState;
 
@@ -22,7 +23,11 @@ pub fn run() {
             commands::context::get_tab_cwd,
             commands::context::get_context,
             commands::suggestions::get_ghost_suggestion,
-            commands::suggestions::record_command_habit
+            commands::suggestions::record_command_habit,
+            storage::load_config,
+            storage::save_config,
+            storage::load_session,
+            storage::save_session
         ])
         .run(tauri::generate_context!())
         .expect("Error al ejecutar la aplicación Tauri");

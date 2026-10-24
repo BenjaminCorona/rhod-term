@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AVAILABLE_THEMES } from "../constants";
+import { loadConfig, saveConfigDebounced } from "../services/storage";
 
 export function useThemeManager(showToast: (msg: string) => void) {
     const [themeIndex, setThemeIndex] = useState<number>(() => {
@@ -7,6 +8,18 @@ export function useThemeManager(showToast: (msg: string) => void) {
         const idx = AVAILABLE_THEMES.findIndex((t) => t.id === saved);
         return idx >= 0 ? idx : 0;
     });
+
+    // Cargar y sincronizar tema desde ~/.rhod/config.json al montar
+    useEffect(() => {
+        loadConfig().then((cfg) => {
+            if (cfg && cfg.theme_id) {
+                const idx = AVAILABLE_THEMES.findIndex((t) => t.id === cfg.theme_id);
+                if (idx >= 0) {
+                    setThemeIndex(idx);
+                }
+            }
+        });
+    }, []);
 
     const currentTheme = AVAILABLE_THEMES[themeIndex] || AVAILABLE_THEMES[0];
 
@@ -31,7 +44,7 @@ export function useThemeManager(showToast: (msg: string) => void) {
         setThemeIndex((prev) => {
             const next = (prev + 1) % AVAILABLE_THEMES.length;
             const theme = AVAILABLE_THEMES[next];
-            localStorage.setItem("rhod_theme_id", theme.id);
+            saveConfigDebounced({ theme_id: theme.id });
             showToast(`Tema: ${theme.name}`);
             return next;
         });
@@ -42,7 +55,7 @@ export function useThemeManager(showToast: (msg: string) => void) {
         if (idx >= 0) {
             setThemeIndex(idx);
             const theme = AVAILABLE_THEMES[idx];
-            localStorage.setItem("rhod_theme_id", theme.id);
+            saveConfigDebounced({ theme_id: theme.id });
             showToast(`Tema: ${theme.name}`);
         }
     }, [showToast]);

@@ -429,6 +429,66 @@ fn safe_skip_chars(target: &str, char_count: usize) -> String {
 }
 
 /// Genera la recomendación inline contextual (Ghost Text) combinando Hábitos + Catálogo Universal
+/// Resuelve la sugerencia para navegación de carpetas reales con cd
+fn resolve_cd_suggestion(current_dir: &Path, trimmed: &str) -> Option<GhostSuggestion> {
+    if trimmed == "cd" {
+        let dirs = get_subdirectories(current_dir);
+        if let Some(first) = dirs.first() {
+            return Some(GhostSuggestion {
+                full_text: format!("cd {}/", first),
+                remaining_text: format!(" {}/", first),
+                hint_type: "folder".into(),
+            });
+        }
+    } else if trimmed.starts_with("cd ") {
+        let arg = trimmed.strip_prefix("cd ").unwrap_or("").trim_start();
+        if arg.is_empty() {
+            let dirs = get_subdirectories(current_dir);
+            if let Some(first) = dirs.first() {
+                return Some(GhostSuggestion {
+                    full_text: format!("cd {}/", first),
+                    remaining_text: format!("{}/", first),
+                    hint_type: "folder".into(),
+                });
+            }
+        } else if let Some((parent_rel, leaf)) = arg.rsplit_once('/') {
+            let target_dir = current_dir.join(parent_rel);
+            let dirs = get_subdirectories(&target_dir);
+            let leaf_lower = leaf.to_lowercase();
+            if let Some(matched) = dirs.iter().find(|d| d.to_lowercase().starts_with(&leaf_lower)) {
+                let leaf_char_count = leaf.chars().count();
+                let matched_char_count = matched.chars().count();
+                if matched_char_count > leaf_char_count {
+                    let rem = format!("{}/", safe_skip_chars(matched, leaf_char_count));
+                    let full = format!("cd {}/{}/", parent_rel, matched);
+                    return Some(GhostSuggestion {
+                        full_text: full,
+                        remaining_text: rem,
+                        hint_type: "folder".into(),
+                    });
+                }
+            }
+        } else {
+            let dirs = get_subdirectories(current_dir);
+            let arg_lower = arg.to_lowercase();
+            if let Some(matched) = dirs.iter().find(|d| d.to_lowercase().starts_with(&arg_lower)) {
+                let arg_char_count = arg.chars().count();
+                let matched_char_count = matched.chars().count();
+                if matched_char_count > arg_char_count {
+                    let rem = format!("{}/", safe_skip_chars(matched, arg_char_count));
+                    let full = format!("cd {}/", matched);
+                    return Some(GhostSuggestion {
+                        full_text: full,
+                        remaining_text: rem,
+                        hint_type: "folder".into(),
+                    });
+                }
+            }
+        }
+    }
+    None
+}
+
 #[tauri::command]
 pub fn get_ghost_suggestion(
     cwd: Option<String>,
@@ -442,7 +502,14 @@ pub fn get_ghost_suggestion(
     let trimmed = input.trim_start();
     let is_empty = trimmed.is_empty();
 
-    // 1. PRIORIDAD MÁXIMA: Buscar en hábitos aprendidos del usuario
+    // 1. Navegación con `cd`: siempre resolver contra carpetas reales de la ruta actual
+    if trimmed == "cd" || trimmed.starts_with("cd ") {
+        if let Some(cd_suggestion) = resolve_cd_suggestion(&current_dir, trimmed) {
+            return Some(cd_suggestion);
+        }
+    }
+
+    // 2. PRIORIDAD: Buscar en hábitos aprendidos del usuario
     if let Some(habit_suggestion) = search_habits(&current_dir, trimmed) {
         return Some(habit_suggestion);
     }

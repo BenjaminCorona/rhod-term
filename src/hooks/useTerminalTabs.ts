@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TabItem, TabGroup, TerminalHandle } from "../types";
+import { loadSession, saveSessionDebounced } from "../services/storage";
 import { extractFolderName } from "../utils";
 
 const SESSION_STORAGE_KEY = "rhod_terminal_session";
@@ -103,26 +104,33 @@ export function useTerminalTabs(
     const tabRefs = useRef<Record<string, TerminalHandle | null>>({});
     const [tabCwds, setTabCwds] = useState<Record<string, string>>(initialState.tabCwds);
 
-    // Persistencia reactiva en localStorage cada vez que cambien las pestañas, grupos, foco o rutas
+    // Cargar sesión persistente desde ~/.rhod/session.json al montar
     useEffect(() => {
-        try {
-            if (tabs.length > 0) {
-                const sessionData: SavedSession = {
-                    tabs: tabs.map((t) => ({
-                        id: t.id,
-                        title: t.title,
-                        cwd: tabCwds[t.id] || t.cwd,
-                        color: t.color,
-                        groupId: t.groupId,
-                    })),
-                    activeTabId,
-                    tabCwds,
-                    groups,
-                };
-                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+        loadSession().then((saved) => {
+            if (saved && Array.isArray(saved.tabs) && saved.tabs.length > 0) {
+                setTabs(saved.tabs);
+                setActiveTabId(saved.activeTabId || saved.tabs[0].id);
+                setTabCwds(saved.tabCwds || {});
+                setGroups(saved.groups || []);
             }
-        } catch (err) {
-            console.warn("[Session] Error al guardar sesión en localStorage:", err);
+        });
+    }, []);
+
+    // Persistencia reactiva en ~/.rhod/session.json cada vez que cambien las pestañas, grupos, foco o rutas
+    useEffect(() => {
+        if (tabs.length > 0) {
+            saveSessionDebounced({
+                tabs: tabs.map((t) => ({
+                    id: t.id,
+                    title: t.title,
+                    cwd: tabCwds[t.id] || t.cwd,
+                    color: t.color,
+                    groupId: t.groupId,
+                })),
+                activeTabId,
+                tabCwds,
+                groups,
+            });
         }
     }, [tabs, activeTabId, tabCwds, groups]);
 
