@@ -96,10 +96,10 @@ body.dragging-tabs * {
 .tab-item.is-dragging {
   cursor: grabbing !important;
   z-index: 50 !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   opacity: 0.98 !important;
-  border-color: rgba(59, 130, 246, 0.5) !important;
-  background: rgba(14, 50, 88, 0.92) !important;
+  border-color: #4a5060 !important;
+  background: #282c35 !important;
 }
 
 /* Contenedor durante arrastre: animación fluida para las pestañas que se desplazan abriendo espacio */
@@ -131,8 +131,8 @@ body.dragging-tabs * {
 
 /* Pestaña activa (Cápsula Chrome: acento azul profundo con borde nítido) */
 .tab-item.active {
-  background: #122d52;
-  border: 1px solid #2563eb;
+  background: #252830;
+  border: 1px solid #3e4451;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   color: #ffffff;
 }
@@ -195,7 +195,7 @@ body.dragging-tabs * {
 }
 
 .tab-item.active .tab-icon {
-  color: #60a5fa;
+  color: #e2e8f0;
   opacity: 1;
 }
 
@@ -219,7 +219,7 @@ body.dragging-tabs * {
 }
 
 .tab-item.active .tab-shortcut-badge {
-  color: rgba(147, 197, 253, 0.65);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* Botón de cerrar pestaña estilo Chrome (círculo al hacer hover) */

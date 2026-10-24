@@ -61,7 +61,7 @@ export function TabBundleItem({
                         className="bundle-fusing-follower"
                         style={{
                             "--initial-offset-x": `${offset}px`,
-                            "--tab-accent-color": tab.color || "#60a5fa",
+                            "--tab-accent-color": tab.color || "#e2e8f0",
                             zIndex: 10 - idx,
                         } as React.CSSProperties}
                     >
@@ -71,9 +71,7 @@ export function TabBundleItem({
                 );
             })}
 
-            {/* Capas 3D de cartas apiladas con animación de colapso al formarse el lote */}
-            <div className="bundle-stack-layer bundle-layer-back" />
-            <div className="bundle-stack-layer bundle-layer-mid" />
+
 
             <div className="tab-bundle-content">
                 {/* Indicador de pertenencia a grupo */}

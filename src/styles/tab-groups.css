@@ -425,17 +425,18 @@
 
 /* ==========================================================================
    SELECCIÓN MÚLTIPLE DE PESTAÑAS (SHIFT / CMD+CLIC)
+   Aspecto neutral tipo macOS Finder / VSCode (Gris seleccionado limpio)
    ========================================================================== */
 .tab-item.is-multi-selected {
-  background: #1b355e !important;
-  border: 1px solid #3b82f6 !important;
+  background: #282c36 !important;
+  border: 1px solid #454b5a !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
   color: #ffffff !important;
 }
 
 .tab-item.is-multi-selected:hover {
-  background: #234375 !important;
-  border-color: #60a5fa !important;
+  background: #313642 !important;
+  border-color: #555c6d !important;
 }
 
 .tab-item.is-multi-selected .tab-name {
@@ -444,7 +445,7 @@
 }
 
 .tab-item.is-multi-selected .tab-icon {
-  color: #60a5fa !important;
+  color: #e2e8f0 !important;
   opacity: 1;
 }
 
@@ -455,9 +456,9 @@
   left: 6px;
   right: 6px;
   height: 2px;
-  background: #3b82f6;
+  background: #94a3b8;
   border-radius: 2px 2px 0 0;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.85);
+  box-shadow: 0 0 4px rgba(148, 163, 184, 0.4);
   pointer-events: none;
 }
 
@@ -469,13 +470,14 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #2563eb;
+  background: #3e4452;
   color: #ffffff;
   font-size: 9px;
   font-weight: 800;
   margin-left: 2px;
   flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* ==========================================================================
@@ -484,29 +486,30 @@
 
 .tab-bundle-item {
   position: relative;
-  background: #0f2747 !important;
-  border: 1px solid #3b82f6 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+  background: #252830 !important;
+  border: 1px solid #3e4451 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
   color: #ffffff !important;
   cursor: grab;
   user-select: none;
   z-index: 5;
   padding: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
 }
 
 .tab-bundle-item:hover {
-  background: #14335c !important;
-  border-color: #60a5fa !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5) !important;
+  background: #2c3039 !important;
+  border-color: #4a5060 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Estado mientras se arrastra la pestaña agrupada */
 .tab-bundle-item.is-dragging {
   cursor: grabbing !important;
   z-index: 95 !important;
-  background: #0f2747 !important;
-  border-color: #60a5fa !important;
+  background: #252830 !important;
+  border-color: #555b6a !important;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65) !important;
 }
 
@@ -523,8 +526,8 @@
   gap: 7px;
   padding: 0 10px;
   border-radius: 8px;
-  background: #112d52;
-  border: 1px solid #3b82f6;
+  background: #252830;
+  border: 1px solid #3e4451;
   color: #ffffff;
   pointer-events: none;
   font-size: 12px;
@@ -538,7 +541,7 @@
 }
 
 .bundle-fusing-follower .tab-icon {
-  color: var(--tab-accent-color, #60a5fa);
+  color: var(--tab-accent-color, #e2e8f0);
   flex-shrink: 0;
 }
 
@@ -561,68 +564,6 @@
   100% {
     transform: translate3d(0, 0, 0) scale(0.92);
     opacity: 0;
-  }
-}
-
-/* Capas 3D que representan las cartas/pestañas colapsadas en la pila (sólidas y opacas) */
-.bundle-stack-layer {
-  position: absolute;
-  border-radius: 6px;
-  pointer-events: none;
-  box-sizing: border-box;
-}
-
-/* Capa trasera (más profunda) */
-.bundle-layer-back {
-  top: -6px;
-  left: 10px;
-  right: 10px;
-  bottom: 0;
-  background: #142238;
-  border: 1px solid #284166;
-  z-index: -2;
-  animation: layerBackSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: transform, opacity;
-}
-
-/* Capa intermedia */
-.bundle-layer-mid {
-  top: -3px;
-  left: 5px;
-  right: 5px;
-  bottom: 0;
-  background: #192e4e;
-  border: 1px solid #365682;
-  z-index: -1;
-  animation: layerMidSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: transform, opacity;
-}
-
-@keyframes layerBackSmooth {
-  0% {
-    transform: translate3d(14px, 4px, 0) scale(0.92);
-    opacity: 0;
-  }
-  25% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes layerMidSmooth {
-  0% {
-    transform: translate3d(8px, 2px, 0) scale(0.96);
-    opacity: 0;
-  }
-  25% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
   }
 }
 
@@ -651,7 +592,7 @@
 
 /* Insignia numérica */
 .tab-bundle-count-pill {
-  background: #2563eb;
+  background: #3b404d;
   color: #ffffff;
   font-size: 10px;
   font-weight: 700;
@@ -659,7 +600,8 @@
   padding: 1px 7px;
   line-height: 15px;
   margin-left: 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
   animation: countPillSmooth 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   will-change: transform, opacity;
@@ -699,7 +641,7 @@
 }
 
 .tab-bundle-icon {
-  color: #60a5fa;
+  color: #cbd5e1;
   flex-shrink: 0;
 }
 
@@ -709,11 +651,9 @@
   letter-spacing: -0.01em;
 }
 
-
-
 /* Insignia numérica del lote de pestañas arrastrado juntas */
 .tab-bundle-badge {
-  background: #2563eb;
+  background: #3b404d;
   color: #ffffff;
   font-size: 10px;
   font-weight: 700;
@@ -721,47 +661,25 @@
   padding: 1px 7px;
   line-height: 15px;
   margin-left: 4px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   flex-shrink: 0;
   user-select: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   letter-spacing: -0.01em;
 }
 
-/* Pestaña cabecera que lidera el arrastre en lote: elevación y cartas apiladas detrás */
+/* Pestaña cabecera que lidera el arrastre en lote: elevación */
 .tab-item.is-bundle-leader {
   z-index: 85 !important;
   transform: scale(1.03) !important;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65) !important;
-  background: #112d52 !important;
+  background: #252830 !important;
+  border-color: #555b6a !important;
 }
 
-.tab-item.is-bundle-leader::after {
-  content: "";
-  position: absolute;
-  top: -4px;
-  right: 5px;
-  left: 5px;
-  bottom: 0;
-  background: #192e4e;
-  border: 1px solid #365682;
-  border-radius: 6px;
-  z-index: -1;
-  pointer-events: none;
-}
-
+.tab-item.is-bundle-leader::after,
 .tab-item.is-bundle-leader::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  right: 10px;
-  left: 10px;
-  bottom: 0;
-  background: #142238;
-  border: 1px solid #284166;
-  border-radius: 6px;
-  z-index: -2;
-  pointer-events: none;
+  display: none !important;
 }
 
 /* Pestañas compañeras del lote durante el arrastre: atenuación suave con borde punteado */
@@ -769,7 +687,7 @@
   opacity: 0.30 !important;
   transform: scale(0.95) !important;
   filter: saturate(0.5) !important;
-  border: 1px dashed rgba(96, 165, 250, 0.5) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.25) !important;
   pointer-events: none !important;
   transition: opacity 0.18s ease, transform 0.18s ease !important;
 }
