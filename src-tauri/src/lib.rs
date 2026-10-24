@@ -20,7 +20,9 @@ pub fn run() {
             commands::pty::resize_pty,
             commands::pty::close_pty,
             commands::context::get_tab_cwd,
-            commands::context::get_context
+            commands::context::get_context,
+            commands::suggestions::get_ghost_suggestion,
+            commands::suggestions::record_command_habit
         ])
         .run(tauri::generate_context!())
         .expect("Error al ejecutar la aplicación Tauri");
