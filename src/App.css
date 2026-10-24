@@ -2897,32 +2897,32 @@ body.dragging-tabs * {
 .ghost-suggestion-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   margin-left: 8px;
-  padding: 1px 5px;
-  background: #142238;
-  border: 1px solid #1f375b;
+  padding: 1px 6px;
+  background: #202228;
+  border: 1px solid #353842;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.65);
+  color: #c4c8d2;
   font-size: 10px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-weight: 500;
   line-height: normal;
   vertical-align: middle;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .ghost-badge-key {
   font-size: 11px;
   font-weight: 600;
-  color: #79a6d8;
+  color: #e2e5eb;
 }
 
 .ghost-badge-type {
   font-size: 8.5px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.45);
-  padding-left: 3px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: #9398a6;
+  padding-left: 4px;
+  border-left: 1px solid #383b45;
 }
