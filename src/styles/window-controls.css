@@ -1,0 +1,36 @@
+/* ============================================================
+   CONTROLES DE VENTANA (WINDOWS Y LINUX)
+   ============================================================ */
+.window-controls {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  margin-left: 6px;
+  margin-right: -12px;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* Botón cerrar estilo Windows 11 / 10: fondo rojo al hacer hover */
+.window-control-btn.btn-close-win:hover {
+  background-color: #e81123 !important;
+  color: #ffffff !important;
+}

@@ -1,0 +1,308 @@
+/* ============================================================
+   PESTAÑAS INDIVIDUALES & NAVEGACIÓN
+   ============================================================ */
+.tabs-container {
+  flex: 1;
+  -webkit-app-region: drag;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0;
+  scroll-behavior: smooth;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Botones de navegación carrusel (< y >) estilo minimalista */
+.btn-carousel-nav {
+  width: 20px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.14s ease, color 0.14s ease, transform 0.14s ease, border-color 0.14s ease;
+  z-index: 5;
+}
+
+.btn-carousel-nav:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+}
+
+.btn-carousel-nav:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+
+/* Desactivar cualquier selección o resaltado de texto en el header y pestañas */
+.tabs-container,
+.tabs-container *,
+.tab-item,
+.tab-item * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+body.dragging-tabs,
+body.dragging-tabs * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+/* Pestaña estilo Chrome Material You (cápsula redondeada) con soporte de arrastre fluido */
+.tab-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: grab;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  user-select: none;
+  touch-action: none;
+}
+
+.tab-item:active {
+  cursor: grabbing;
+}
+
+/* Pestaña en estado de arrastre activo (elevada con sombra profunda estilo Apple) */
+.tab-item.is-dragging {
+  cursor: grabbing !important;
+  z-index: 50 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  opacity: 0.98 !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  background: rgba(14, 50, 88, 0.92) !important;
+}
+
+/* Contenedor durante arrastre: animación fluida para las pestañas que se desplazan abriendo espacio */
+.tabs-container.has-dragging .tab-item:not(.is-dragging) {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Ocultar divisores durante arrastre para evitar artefactos visuales */
+.tabs-container.has-dragging .tab-item::before {
+  opacity: 0 !important;
+}
+
+/* Divisor sutil estilo Chrome entre pestañas inactivas consecutivas */
+.tab-item:not(.active):not(:hover) + .tab-item:not(.active):not(:hover)::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.tab-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-main);
+}
+
+/* Pestaña activa (Cápsula Chrome: acento azul profundo con borde nítido) */
+.tab-item.active {
+  background: #122d52;
+  border: 1px solid #2563eb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+/* Animación sutil y fluida al abrir pestaña nueva (estilo Apple Spring, limpio y mate sin resplandores) */
+@keyframes appleTabEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.90) translate3d(-8px, 0, 0);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.02) translate3d(1px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+.tab-item.is-new-tab:not(.is-dragging) {
+  animation: appleTabEntrance 0.20s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Animación sutil y fluida al cerrar pestaña (estilo Apple) */
+@keyframes appleTabClose {
+  0% {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+    max-width: 180px;
+  }
+  35% {
+    opacity: 0.6;
+    transform: scale(0.92) translate3d(0, 2px, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.80) translate3d(0, 4px, 0);
+    max-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: -4px !important;
+    border-width: 0 !important;
+  }
+}
+
+.tab-item.is-closing {
+  animation: appleTabClose 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  will-change: transform, opacity, max-width;
+}
+
+.tab-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.tab-item.active .tab-icon {
+  color: #60a5fa;
+  opacity: 1;
+}
+
+.tab-name {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-shortcut-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  letter-spacing: 0.2px;
+  transition: opacity 0.12s ease;
+}
+
+.tab-item.active .tab-shortcut-badge {
+  color: rgba(147, 197, 253, 0.65);
+}
+
+/* Botón de cerrar pestaña estilo Chrome (círculo al hacer hover) */
+.tab-close-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: all 0.12s ease;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.tab-close-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  opacity: 1;
+}
+
+.tab-item.active .tab-close-btn {
+  opacity: 0.75;
+}
+
+.tab-item.active .tab-close-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  opacity: 1;
+}
+
+/* Botón + Nueva pestaña estilo Chrome/Apple con micro-interacción táctil */
+.btn-new-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease, transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.btn-new-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  transform: scale(1.1);
+}
+
+.btn-new-tab:active {
+  transform: scale(0.90);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Atajos rápidos en el header */
+.quick-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-quick {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}

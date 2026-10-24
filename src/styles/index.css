@@ -1,0 +1,24 @@
+/* ============================================================
+   RHOD TERMINAL - MODULAR DESIGN SYSTEM
+   ============================================================ */
+
+/* 1. Capa base y variables */
+@import "./fonts.css";
+@import "./variables.css";
+
+/* 2. Estructura principal y layout */
+@import "./header.css";
+@import "./tabs.css";
+@import "./tab-groups.css";
+@import "./terminal.css";
+@import "./statusbar.css";
+
+/* 3. Modales y menús flotantes */
+@import "./command-palette.css";
+@import "./settings-modal.css";
+@import "./context-menus.css";
+
+/* 4. Utilidades de plataforma y notificaciones */
+@import "./window-controls.css";
+@import "./updater.css";
+@import "./toast.css";

@@ -1,0 +1,96 @@
+/* ============================================================
+   3. BARRA DE ESTADO INFERIOR (DISCRETA Y ELEGANTE)
+   ============================================================ */
+.app-statusbar {
+  height: 28px;
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.status-item:hover {
+  color: var(--text-main);
+}
+
+.theme-item {
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.theme-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: var(--accent);
+}
+
+.font-family-item {
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.font-family-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+.font-size-item {
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.font-size-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #22c55e;
+}
