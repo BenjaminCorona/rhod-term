@@ -659,33 +659,85 @@ export function Header({
         return [colorMenu.tabId];
     }, [colorMenu, selectedTabIds]);
 
+    // Bloqueo de enfriamiento para evitar llamadas dobles o rebotes al maximizar
+    const toggleMaximizeCooldownRef = useRef(false);
+
+    const handleSafeToggleMaximize = useCallback(() => {
+        // En macOS, AppKit gestiona el doble clic de data-tauri-drag-region de forma nativa.
+        // Si JavaScript también llama a toggleMaximize(), colisiona con el SO produciendo el doble rebote.
+        if (isMac) return;
+
+        if (toggleMaximizeCooldownRef.current) return;
+        toggleMaximizeCooldownRef.current = true;
+        setTimeout(() => {
+            toggleMaximizeCooldownRef.current = false;
+        }, 400);
+
+        try {
+            getCurrentWindow().toggleMaximize().catch(() => {});
+        } catch {
+            // Ignorar en pruebas web
+        }
+    }, [isMac]);
+
     // Arrastre nativo de la ventana al interactuar con el área vacía del header (sin pestañas)
     const handleEmptyAreaPointerDown = useCallback((e: React.PointerEvent) => {
         if (e.button !== 0) return;
         const target = e.target as HTMLElement;
+
+        // Si se hizo clic sobre una pestaña, grupo o botón, no interferir
         if (
-            target === tabsContainerRef.current ||
-            target.classList.contains("tabs-container") ||
-            target.classList.contains("tabs-carousel-wrapper")
+            target.closest(".tab-item") ||
+            target.closest(".tab-group-pill") ||
+            target.closest(".btn-carousel-nav") ||
+            target.closest(".btn-new-tab") ||
+            target.closest("button")
         ) {
-            if (e.detail === 2) {
-                try {
-                    getCurrentWindow().toggleMaximize().catch(() => {});
-                } catch {
-                    // Ignorar en pruebas web
-                }
-            } else {
-                try {
-                    getCurrentWindow().startDragging().catch(() => {});
-                } catch {
-                    // Ignorar en pruebas web
-                }
+            return;
+        }
+
+        e.stopPropagation();
+
+        if (e.detail === 2) {
+            if (!isMac) {
+                handleSafeToggleMaximize();
+            }
+        } else if (e.detail === 1) {
+            try {
+                getCurrentWindow().startDragging().catch(() => {});
+            } catch {
+                // Ignorar en pruebas web
             }
         }
-    }, []);
+    }, [handleSafeToggleMaximize, isMac]);
+
+    // Doble clic seguro en áreas vacías del header (espaciadores, área derecha)
+    const handleHeaderDoubleClick = useCallback((e: React.MouseEvent) => {
+        if (isMac) return;
+
+        const target = e.target as HTMLElement;
+        if (
+            target.closest(".tab-item") ||
+            target.closest(".tab-group-pill") ||
+            target.closest(".btn-carousel-nav") ||
+            target.closest(".btn-new-tab") ||
+            target.closest(".header-version") ||
+            target.closest(".window-controls") ||
+            target.closest("button")
+        ) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        handleSafeToggleMaximize();
+    }, [handleSafeToggleMaximize, isMac]);
 
     return (
-        <header className="app-header" data-tauri-drag-region>
+        <header
+            className="app-header"
+            data-tauri-drag-region
+            onDoubleClick={handleHeaderDoubleClick}
+        >
             {/* 1. Espacio exclusivo de 78px en macOS para el semáforo nativo de Apple */}
             {isMac && (
                 <div className="header-macos-spacer" data-tauri-drag-region />
@@ -715,7 +767,6 @@ export function Header({
                         dragState?.isDragging ? "has-dragging" : ""
                     }`}
                     data-tauri-drag-region
-                    onPointerDown={handleEmptyAreaPointerDown}
                 >
                     {(() => {
                         let currentVisibleIndex = 0;
