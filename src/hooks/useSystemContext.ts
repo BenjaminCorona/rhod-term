@@ -5,7 +5,7 @@ import { SystemContext } from "../types";
 import { formatDisplayPath } from "../utils";
 
 export function useSystemContext(activeTabId: string, currentTabPath?: string) {
-    const [appVersion, setAppVersion] = useState<string>("0.3.0");
+    const [appVersion, setAppVersion] = useState<string>("0.9.2");
     const [context, setContext] = useState<SystemContext>({
         cwd: "~",
         git_branch: "-",

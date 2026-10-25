@@ -6,7 +6,7 @@
 
 **Terminal moderna, minimalista y ultraligera construida con Rust y Tauri v2.**
 
-[![Release](https://img.shields.io/badge/release-v0.3.0-blue.svg?style=flat-square)](https://github.com)
+[![Release](https://img.shields.io/badge/release-v0.9.2-blue.svg?style=flat-square)](https://github.com)
 [![Rust](https://img.shields.io/badge/rust-2024_edition-orange.svg?style=flat-square)](https://www.rust-lang.org)
 [![Tauri](https://img.shields.io/badge/tauri-v2-24C8D8.svg?style=flat-square)](https://tauri.app)
 [![React](https://img.shields.io/badge/react-v19-61DAFB.svg?style=flat-square)](https://react.dev)

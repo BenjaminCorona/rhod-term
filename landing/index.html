@@ -1260,6 +1260,71 @@
                 font-weight: 600;
             }
 
+            
+            /* 5. Cuadrícula de Características Modernas v0.9.2 */
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                max-width: 1040px;
+                margin: 0 auto;
+            }
+
+            @media (max-width: 900px) {
+                .features-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (max-width: 600px) {
+                .features-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .feature-card {
+                background: var(--bg-surface);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .feature-card:hover {
+                border-color: rgba(255, 255, 255, 0.2);
+                transform: translateY(-2px);
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            }
+
+            .feature-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #60a5fa;
+            }
+
+            .feature-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text);
+                margin: 0;
+            }
+
+            .feature-desc {
+                font-size: 13.5px;
+                color: var(--text-muted);
+                line-height: 1.55;
+                margin: 0;
+            }
+
             /* Footer */
             footer {
                 border-top: 1px solid var(--border);
@@ -1462,7 +1527,7 @@
                         alt="Rhod Logo"
                     />
                     <span>Rhod</span>
-                    <span class="version-badge">v0.3.0</span>
+                    <span class="version-badge">v0.9.2</span>
                 </a>
 
                 <div class="nav-links">
@@ -1537,6 +1602,10 @@
                                 </svg>
                                 <span>backend-api</span>
                                 <span class="tab-close">✕</span>
+                            </div>
+                            <div class="tab-group-pill-demo" style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 5px; background: rgba(59, 130, 246, 0.14); border: 1px solid rgba(59, 130, 246, 0.28); font-size: 10px; font-weight: 700; color: #60a5fa; letter-spacing: 0.3px; user-select: none;">
+                                <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6;"></span>
+                                <span>DEV</span>
                             </div>
                             <div class="tab" data-tab="docker-env">
                                 <svg
@@ -1676,7 +1745,7 @@
                     <!-- Botón inteligente con icono del OS -->
                     <a
                         id="main-download-btn"
-                        href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_aarch64.dmg"
+                        href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_aarch64.dmg"
                         class="btn-primary"
                         download
                     >
@@ -1724,7 +1793,7 @@
                 >
                     <div class="modal-box">
                         <div class="modal-header">
-                            <h3>Descargar Rhod v0.3.0</h3>
+                            <h3>Descargar Rhod v0.9.2</h3>
                             <button
                                 type="button"
                                 id="close-modal-btn"
@@ -1740,7 +1809,7 @@
 
                         <div class="platforms-list">
                             <a
-                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_aarch64.dmg"
+                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_aarch64.dmg"
                                 class="platform-link"
                                 download
                             >
@@ -1755,7 +1824,7 @@
                             </a>
 
                             <a
-                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_x64-setup.exe"
+                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_x64-setup.exe"
                                 class="platform-link"
                                 download
                             >
@@ -1772,7 +1841,7 @@
                             </a>
 
                             <a
-                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_x64_en-US.msi"
+                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_x64_en-US.msi"
                                 class="platform-link"
                                 download
                             >
@@ -1787,7 +1856,7 @@
                             </a>
 
                             <a
-                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_amd64.deb"
+                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_amd64.deb"
                                 class="platform-link"
                                 download
                             >
@@ -1802,7 +1871,7 @@
                             </a>
 
                             <a
-                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_amd64.AppImage"
+                                href="https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_amd64.AppImage"
                                 class="platform-link"
                                 download
                             >
@@ -2266,6 +2335,32 @@
                         misma experiencia en cualquier entorno.
                     </p>
                 </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="color: #4ade80;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Memoria de Hábitos Frecency</h3>
+                    <p class="feature-desc">
+                        Autocompletado predictivo inteligente (Ghost Suggestions). Aprende tus comandos y carpetas frecuentes en segundo plano (~/.rhod/history.json) para cualquier tecnología (Python, Django, Docker, Rust, Go). Completa al instante con flecha derecha (→) o Tab.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="color: #c084fc;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 17 12 22 22 17" />
+                            <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Grupos y Selección Múltiple</h3>
+                    <p class="feature-desc">
+                        Agrupa pestañas por proyecto o entorno con etiquetas, colores y pastillas colapsables. Selecciona múltiples pestañas con Shift o Cmd+clic para moverlas juntas en bloque o cerrarlas de una sola vez.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -2337,11 +2432,11 @@
 
                 // URLs directas a los instaladores reales en GitHub Releases
                 const macDirect =
-                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_aarch64.dmg";
+                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_aarch64.dmg";
                 const winDirect =
-                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_x64-setup.exe";
+                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_x64-setup.exe";
                 const linuxDirect =
-                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.3.0/Rhod_0.3.0_amd64.deb";
+                    "https://github.com/BenjaminCorona/rhod-term/releases/download/v0.9.2/Rhod_0.9.2_amd64.deb";
 
                 if (isWin) {
                     if (osIcon) osIcon.innerHTML = windowsIconHtml;
@@ -2349,7 +2444,7 @@
                         btnText.textContent = "Descargar para Windows (.exe)";
                     if (subtext)
                         subtext.textContent =
-                            "Descarga directa: Rhod_0.3.0_x64-setup.exe";
+                            "Descarga directa: Rhod_0.9.2_x64-setup.exe";
                     if (btnLink) btnLink.href = winDirect;
                     if (footerMod) footerMod.textContent = "Atajos Ctrl+K";
                     modIndicators.forEach((el) => (el.textContent = "Ctrl+"));
@@ -2359,7 +2454,7 @@
                         btnText.textContent = "Descargar para Linux (.deb)";
                     if (subtext)
                         subtext.textContent =
-                            "Descarga directa: Rhod_0.3.0_amd64.deb";
+                            "Descarga directa: Rhod_0.9.2_amd64.deb";
                     if (btnLink) btnLink.href = linuxDirect;
                     if (footerMod) footerMod.textContent = "Atajos Ctrl+K";
                     modIndicators.forEach((el) => (el.textContent = "Ctrl+"));
@@ -2370,7 +2465,7 @@
                         btnText.textContent = "Descargar para macOS (.dmg)";
                     if (subtext)
                         subtext.textContent =
-                            "Descarga directa: Rhod_0.3.0_aarch64.dmg";
+                            "Descarga directa: Rhod_0.9.2_aarch64.dmg";
                     if (btnLink) btnLink.href = macDirect;
                     if (footerMod) footerMod.textContent = "Atajos ⌘K";
                     modIndicators.forEach((el) => (el.textContent = "⌘"));
@@ -2442,7 +2537,14 @@
                 const commands = {
                     help: "Comandos disponibles:\n  rhod features    - Ver características destacadas\n  rhod benchmarks  - Comparativa de memoria y almacenamiento\n  shortcuts        - Resumen de atajos de teclado\n  download         - Ir a la descarga oficial\n  clear            - Limpiar pantalla",
                     features:
-                        "[features]\n  • Núcleo Rust con ConPTY (Windows) y POSIX PTY (macOS/Linux)\n  • Multi-pestañas con subprocesos aislados\n  • Detección automática de CWD y rama Git activa\n  • Menor a 60 MB de RAM en reposo",
+                        "[features v0.9.2]\n  • Núcleo Rust de alto rendimiento con portable-pty (macOS, Windows, Linux)\n  • Motor de Hábitos Frecency (~/.rhod/history.json) con sugerencias predictivas\n  • Grupos de pestañas (Tab Groups) y selección múltiple con arrastre en bloque\n  • Persistencia JSON nativa de sesiones y ajustes (~/.rhod/session.json)\n  • Actualizador automático integrado y firmado con tauri-plugin-updater\n  • Menos de 60 MB de RAM en reposo y arranque en frío en ~45 ms",
+                    habits:
+                        "[habits]\n  Rhod analiza la frecuencia y recencia (Frecency) de tus comandos\n  y subdirectorios locales, mostrándote ghost text en tiempo real\n  que completas con flecha derecha (→) o Tab en cualquier tecnología.",
+                    groups:
+                        "[groups]\n  Crea grupos de pestañas con nombres y colores personalizados.\n  Colápsalos para ahorrar espacio y selecciona en bloque con Shift o Cmd+clic.",
+                    shortcuts:
+                        "[shortcuts]\n  ⌘T / Ctrl+T      Nueva pestaña\n  ⌘W / Ctrl+W      Cerrar pestaña o bloque seleccionado\n  ⌘1..9            Cambiar a pestaña N\n  Shift/⌘+Clic     Selección múltiple de pestañas\n  ⌘+ / ⌘-          Zoom de tipografía\n  ⌘K / Ctrl+K      Paleta de comandos y configuración",
+
                     benchmarks:
                         "[benchmarks]\n  • RAM Reposo:     58 MB (Rhod) vs ~470 MB (Electron)\n  • Espacio Disco:  5.0 MB (Rhod) vs ~450 MB (Electron)\n  • Tiempo inicio:  ~45 ms (Rhod) vs ~900 ms+ (Electron)",
                     shortcuts:
