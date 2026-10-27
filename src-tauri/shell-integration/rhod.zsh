@@ -48,21 +48,71 @@ if [[ -f "$_rhod_dir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; th
   ZSH_HIGHLIGHT_STYLES[redirection]="fg=magenta"
 fi
 
-# 3. Prompt moderno estilo Warp / Starship (sin ruido de usuario@máquina)
+# 3. Prompt moderno estilo Rhod con ruta completa y medición de tiempo de ejecución
 setopt PROMPT_SUBST
+zmodload zsh/datetime 2>/dev/null
 autoload -Uz vcs_info 2>/dev/null
 zstyle ':vcs_info:*' enable git 2>/dev/null
 zstyle ':vcs_info:git:*' formats ' %F{244}git:(%F{213}%b%F{244})%f' 2>/dev/null
 
-_rhod_precmd() {
-  vcs_info 2>/dev/null
+_rhod_cmd_start_time=""
+_rhod_last_duration=""
+
+_rhod_preexec() {
+  _rhod_cmd_start_time=$EPOCHREALTIME
+  # Notificar inicio de comando mediante OSC 133;C
+  printf "\e]133;C\a"
 }
+
+_rhod_precmd() {
+  if [[ -n "$_rhod_cmd_start_time" ]]; then
+    local -F elapsed=$(( EPOCHREALTIME - _rhod_cmd_start_time ))
+    _rhod_cmd_start_time=""
+    if (( elapsed < 1 )); then
+      _rhod_last_duration=$(printf "(%.3fs)" $elapsed)
+    elif (( elapsed < 60 )); then
+      _rhod_last_duration=$(printf "(%.2fs)" $elapsed)
+    else
+      local -i mins=$(( elapsed / 60 ))
+      local -F secs=$(( elapsed - mins * 60 ))
+      _rhod_last_duration=$(printf "(%dm %.1fs)" $mins $secs)
+    fi
+    # Notificar duración exacta del comando a Rhod Terminal mediante OSC 133;D
+    printf "\e]133;D;%s\a" "$_rhod_last_duration"
+  fi
+
+  vcs_info 2>/dev/null
+  # Notificar a Rhod el CWD actual mediante OSC 7 en tiempo real
+  printf "\e]7;file://%s\a" "$PWD"
+  # Notificar a Rhod mediante OSC 133;A que el shell está listo en el prompt
+  printf "\e]133;A\a"
+}
+
 autoload -Uz add-zsh-hook 2>/dev/null
 if (( $+functions[add-zsh-hook] )); then
   add-zsh-hook precmd _rhod_precmd
+  add-zsh-hook preexec _rhod_preexec
 fi
 
-# Formato limpio y espacioso: ruta en cian + rama git en magenta + chevron vibrante
-if [[ -z "$_RHOD_CUSTOM_PROMPT" ]]; then
-  PROMPT='%F{39}%1~%f${vcs_info_msg_0_} %F{119}❯%f '
+_rhod_enable_classic() {
+  _RHOD_CLASSIC_MODE=1
+  PROMPT='%F{244}%~%f %F{242}${_rhod_last_duration}%f${vcs_info_msg_0_} %F{119}❯%f '
+  zle && zle reset-prompt 2>/dev/null
+}
+
+_rhod_enable_editor() {
+  unset _RHOD_CLASSIC_MODE
+  PROMPT=""
+  RPROMPT=""
+  zle && zle reset-prompt 2>/dev/null
+}
+
+# En modo Editor (por defecto en Rhod), no mostramos prompt en xterm para que la terminal esté 100% limpia
+if [[ -n "$RHOD_TERMINAL" && -z "$_RHOD_CLASSIC_MODE" ]]; then
+  PROMPT=""
+  RPROMPT=""
+else
+  if [[ -z "$_RHOD_CUSTOM_PROMPT" ]]; then
+    PROMPT='%F{244}%~%f %F{242}${_rhod_last_duration}%f${vcs_info_msg_0_} %F{119}❯%f '
+  fi
 fi

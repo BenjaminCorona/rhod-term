@@ -63,7 +63,6 @@ export default function App() {
         appVersion,
         isMac,
         modSymbol,
-        displayPath,
         refreshContext,
     } = useSystemContext(activeTabId, tabCwds[activeTabId]);
 
@@ -224,7 +223,6 @@ export default function App() {
                 closingTabIds={closingTabIds}
                 unbundlingTabIds={unbundlingTabIds}
                 onTriggerUnbundleAnimation={triggerUnbundleAnimation}
-                appVersion={appVersion}
                 modSymbol={modSymbol}
                 isMac={isMac}
                 onSelectTab={setActiveTabId}
@@ -243,10 +241,6 @@ export default function App() {
                 onReorderGroup={handleReorderGroup}
                 onMoveGroupToIndex={handleMoveGroupToIndex}
                 onUnifiedDrop={handleUnifiedDrop}
-                onCopyVersion={() => {
-                    navigator.clipboard.writeText(`v${appVersion}`);
-                    showToast(`Versión v${appVersion} copiada`);
-                }}
             />
 
             {/* 2. Área principal de terminales con tema reactivo */}
@@ -265,20 +259,12 @@ export default function App() {
 
             {/* 3. Barra de estado inferior conectada a Configuración */}
             <StatusBar
-                context={context}
-                displayPath={displayPath}
-                currentFont={currentFont}
-                fontSize={fontSize}
-                currentTheme={currentTheme}
+                appVersion={appVersion}
                 sessionsCount={tabs.length}
                 modSymbol={modSymbol}
-                onCopyPath={() => {
-                    navigator.clipboard.writeText(context.cwd);
-                    showToast("Ruta copiada");
-                }}
-                onGitStatus={() => {
-                    tabRefs.current[activeTabId]?.executeCommand("git status");
-                    showToast("git status");
+                onCopyVersion={() => {
+                    navigator.clipboard.writeText(`v${appVersion}`);
+                    showToast(`Versión v${appVersion} copiada`);
                 }}
                 onOpenSettings={handleOpenSettings}
             />

@@ -14,7 +14,6 @@ interface HeaderProps {
     groups?: TabGroup[];
     activeTabId: string;
     selectedTabIds?: Set<string>;
-    appVersion: string;
     modSymbol: string;
     isMac: boolean;
     onSelectTab: (id: string) => void;
@@ -31,7 +30,6 @@ interface HeaderProps {
         to: { type: "tab" | "group"; id: string },
         isMovingRight: boolean
     ) => void;
-    onCopyVersion: () => void;
     onSetTabColor?: (ids: string | string[], color: string | undefined) => void;
     onCreateGroup?: (ids: string | string[], title: string, color: string) => void;
     onAssignTabToGroup?: (ids: string | string[], groupId?: string) => void;
@@ -89,7 +87,6 @@ export function Header({
     groups = [],
     activeTabId,
     selectedTabIds = new Set(),
-    appVersion,
     modSymbol,
     isMac,
     onSelectTab,
@@ -99,7 +96,6 @@ export function Header({
     onAddTab,
     onReorderTabs,
     onUnifiedDrop,
-    onCopyVersion,
     onSetTabColor,
     onCreateGroup,
     onAssignTabToGroup,
@@ -1013,14 +1009,6 @@ export function Header({
             </div>
 
             <div className="header-right" data-tauri-drag-region>
-                <span
-                    className="header-version"
-                    onClick={onCopyVersion}
-                    title="Versión de Rhod (clic para copiar)"
-                >
-                    v{appVersion}
-                </span>
-
                 {!isMac && <WindowControls />}
             </div>
 

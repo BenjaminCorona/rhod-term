@@ -61,6 +61,15 @@ export function useKeyboardShortcuts({
     }, [activeTabId, tabRefs, showToast]);
 
     const handlePaste = useCallback(async () => {
+        const activeEl = document.activeElement;
+        // Si el foco está en un textarea o input de texto (ej: PromptEditor), no enviar al PTY
+        if (
+            activeEl instanceof HTMLTextAreaElement ||
+            activeEl instanceof HTMLInputElement
+        ) {
+            return;
+        }
+
         try {
             const text = await navigator.clipboard.readText();
             if (text) {
@@ -200,6 +209,13 @@ export function useKeyboardShortcuts({
             actionType: "restart",
         },
         {
+            id: "toggle-editor-mode",
+            keys: [modSymbol, "E"],
+            label: "Alternar Editor",
+            desc: "Alterna entre el editor interactivo con ratón/multilínea y el modo clásico TTY",
+            category: "Terminal",
+        },
+        {
             id: "autocomplete",
             keys: ["Tab"],
             label: "Autocompletar",
@@ -219,6 +235,17 @@ export function useKeyboardShortcuts({
         const handleKeyDown = (e: KeyboardEvent) => {
             const isCmdOrCtrl = e.metaKey || e.ctrlKey;
             const key = e.key.toLowerCase();
+            const target = e.target as HTMLElement | null;
+            const isInputFocused =
+                target instanceof HTMLTextAreaElement ||
+                target instanceof HTMLInputElement ||
+                Boolean(target?.isContentEditable);
+
+            // Si el usuario está escribiendo en el PromptEditor u otro campo de texto,
+            // respetar el portapapeles y edición nativos (Cmd/Ctrl + V, C, X, A, Z) sin interferir
+            if (isInputFocused && isCmdOrCtrl && ["v", "c", "x", "a", "z"].includes(key)) {
+                return;
+            }
 
             // Zoom
             if (isCmdOrCtrl && (e.key === "+" || e.key === "=")) {

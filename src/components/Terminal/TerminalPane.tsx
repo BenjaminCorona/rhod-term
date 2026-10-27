@@ -3,6 +3,7 @@ import {
     useRef,
     useState,
     useImperativeHandle,
+    useCallback,
     forwardRef,
 } from "react";
 import { Terminal, ITheme } from "@xterm/xterm";
@@ -12,11 +13,24 @@ import "@xterm/xterm/css/xterm.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { TerminalHandle } from "../../types";
+import { PromptEditor, PromptEditorHandle } from "./PromptEditor";
+import { TerminalWelcomeBanner } from "./TerminalWelcomeBanner";
+import { Sparkles } from "lucide-react";
+import { formatDisplayPath } from "../../utils";
 
 interface GhostSuggestion {
     full_text: string;
     remaining_text: string;
     hint_type: string;
+}
+
+interface ExecutedCommandBlock {
+    cmd: string;
+    cwd: string;
+    displayPath: string;
+    startTime: number;
+    headerBufferY: number;
+    finalized: boolean;
 }
 
 interface GhostCoords {
@@ -39,9 +53,37 @@ interface TerminalPaneProps {
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
     ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
+        const promptEditorRef = useRef<PromptEditorHandle>(null);
         const termRef = useRef<Terminal | null>(null);
         const fitRef = useRef<FitAddon | null>(null);
         const [mountCount, setMountCount] = useState(0);
+
+        // Modo de edición interactivo de comandos (ratón, multilínea y autocompletado predictivo)
+        const [isPromptEditor, setIsPromptEditor] = useState<boolean>(() => {
+            try {
+                const saved = localStorage.getItem("rhod_prompt_editor_mode");
+                return saved !== null ? saved === "true" : true;
+            } catch {
+                return true;
+            }
+        });
+        const [isAlternateBuffer, setIsAlternateBuffer] = useState<boolean>(false);
+const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+            try {
+                return localStorage.getItem("rhod_hide_welcome_banner") !== "true";
+            } catch {
+                return true;
+            }
+        });
+
+        const isPromptEditorRef = useRef(isPromptEditor);
+        isPromptEditorRef.current = isPromptEditor;
+
+        const isAlternateBufferRef = useRef(isAlternateBuffer);
+        isAlternateBufferRef.current = isAlternateBuffer;
+
+        const isAtShellPromptRef = useRef(true);
+        const hasExecutedCommandRef = useRef(false);
 
         // Estado y referencias para Ghost Text (sugerencias inline)
         const [ghostSuggestion, setGhostSuggestion] = useState<GhostSuggestion | null>(null);
@@ -50,9 +92,18 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
         const inputLineRef = useRef<string>("");
         const queryTimerRef = useRef<number | null>(null);
 
-        // Referencias estables para evitar re-ejecución del ciclo de vida del PTY
-        const latestCwdRef = useRef<string>(cwd);
-        latestCwdRef.current = cwd;
+        // Estado reactivo y referencia para CWD (directorio de trabajo actual)
+        const [currentCwd, setCurrentCwd] = useState<string>(initialCwd || cwd);
+        const latestCwdRef = useRef<string>(initialCwd || cwd);
+        latestCwdRef.current = currentCwd;
+
+        useEffect(() => {
+            const next = initialCwd || cwd;
+            if (next && next.trim()) {
+                setCurrentCwd(next.trim());
+                latestCwdRef.current = next.trim();
+            }
+        }, [initialCwd, cwd]);
 
         const onCwdChangeRef = useRef(onCwdChange);
         onCwdChangeRef.current = onCwdChange;
@@ -62,6 +113,43 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
         const fontFamilyRef = useRef(fontFamily);
         fontFamilyRef.current = fontFamily;
+
+                const activeCommandBlockRef = useRef<ExecutedCommandBlock | null>(null);
+
+        const finalizeCommandBlock = useCallback((receivedDurationStr?: string) => {
+            const block = activeCommandBlockRef.current;
+            if (!block || block.finalized) return;
+            block.finalized = true;
+
+            const term = termRef.current;
+            if (!term) return;
+
+            const elapsedSec = (performance.now() - block.startTime) / 1000;
+            const durStr =
+                receivedDurationStr ||
+                (elapsedSec < 1
+                    ? `(${elapsedSec.toFixed(3)}s)`
+                    : elapsedSec < 60
+                    ? `(${elapsedSec.toFixed(2)}s)`
+                    : `(${Math.floor(elapsedSec / 60)}m ${(elapsedSec % 60).toFixed(1)}s)`);
+
+            const buffer = term.buffer.active;
+            const currentBaseY = buffer.baseY;
+
+            // Si la línea del encabezado aún está visible en el viewport
+            if (
+                block.headerBufferY >= currentBaseY &&
+                block.headerBufferY < currentBaseY + term.rows
+            ) {
+                const screenRow = block.headerBufferY - currentBaseY + 1; // 1-indexed para ANSI
+                const screenCol = block.displayPath.length + 2; // Espacio tras la ruta completa
+                term.write(
+                    `\x1b7\x1b[${screenRow};${screenCol}H\x1b[38;5;242m${durStr}\x1b[0m\x1b8`
+                );
+            } else if (block.headerBufferY >= 0) {
+                term.write(`\x1b[38;5;242m ${durStr}\x1b[0m\r\n`);
+            }
+        }, []);
 
         // Función estable para recalcular la posición pixel-perfect del cursor
         const updateGhostPosition = () => {
@@ -167,7 +255,11 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 return Boolean(termRef.current?.hasSelection());
             },
             focus: () => {
-                termRef.current?.focus();
+                if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                    promptEditorRef.current?.focus();
+                } else {
+                    termRef.current?.focus();
+                }
             },
             restart: () => {
                 invoke("close_pty", { id }).catch(console.error);
@@ -199,16 +291,34 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                         window.clearTimeout(idlePromptTimer);
                     }
                     idlePromptTimer = window.setTimeout(() => {
-                        if (!isDisposed && inputLineRef.current === "") {
-                            triggerSuggestionQuery("");
+                        if (!isDisposed) {
+                            if (
+                                isPromptEditorRef.current &&
+                                !isAlternateBufferRef.current &&
+                                termRef.current
+                            ) {
+                                if (!hasExecutedCommandRef.current) {
+                                    // Pestaña inicial recién abierta: limpiar completamente para que se vea 100% limpia
+                                    termRef.current.clear();
+                                } else if (isAtShellPromptRef.current) {
+                                    // Borrar la línea de entrada/prompt residual en xterm para que el histórico parezca un chat
+                                    termRef.current.write("\x1b[2K\r");
+                                    isAtShellPromptRef.current = false;
+                                }
+                            }
+                            finalizeCommandBlock();
+                            if (inputLineRef.current === "") {
+                                triggerSuggestionQuery("");
+                            }
                         }
-                    }, 80);
+                    }, 50);
                 }
             };
 
             const term = new Terminal({
-                cursorBlink: true,
+                cursorBlink: false,
                 cursorStyle: "bar",
+                cursorInactiveStyle: "none",
                 fontSize: fontSizeRef.current,
                 fontFamily: fontFamilyRef.current,
                 letterSpacing: 0,
@@ -232,6 +342,26 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
             // Atajos de teclado y autocompletado con Flecha Derecha (→) / Tab
             term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
                 if (e.type === "keydown") {
+                    // Si estamos en modo Editor, ninguna pulsación debe ir a xterm directamente
+                    if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                        const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+                        const key = e.key.toLowerCase();
+                        if (isCmdOrCtrl && key === "e") {
+                            setIsPromptEditor((prev) => {
+                                const next = !prev;
+                                try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
+                                if (!next) {
+                                    invoke("write_pty", { id, data: "\r" }).catch(() => {});
+                                    termRef.current?.focus();
+                                }
+                                return next;
+                            });
+                            return false;
+                        }
+                        // Redirigir el foco al PromptEditor y bloquear el evento en xterm
+                        promptEditorRef.current?.focus();
+                        return false;
+                    }
                     // Si hay sugerencia ghost activa y se presiona Flecha Derecha o Tab:
                     if ((e.key === "ArrowRight" || e.key === "Tab") && ghostSuggestionRef.current) {
                         const suggestion = ghostSuggestionRef.current;
@@ -263,6 +393,14 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                     const key = e.key.toLowerCase();
 
                     if (isCmdOrCtrl) {
+                        if (key === "e") {
+                            setIsPromptEditor((prev) => {
+                                const next = !prev;
+                                try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
+                                return next;
+                            });
+                            return false;
+                        }
                         if (["t", "w", "k", "r", ",", "+", "-", "=", "_", "0"].includes(key)) {
                             return false;
                         }
@@ -277,7 +415,20 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 return true;
             });
 
-            // Parser OSC 7 para tracking de CWD
+            // Parser OSC 133 para tracking de comandos y duración
+            const osc133Disposable = term.parser.registerOscHandler(133, (data) => {
+                if (data.startsWith("D;")) {
+                    const dur = data.slice(2);
+                    finalizeCommandBlock(dur);
+                } else if (data.startsWith("A")) {
+                    isAtShellPromptRef.current = true;
+                    finalizeCommandBlock();
+                } else if (data.startsWith("C")) {
+                    isAtShellPromptRef.current = false;
+                }
+                return true;
+            });
+
             const osc7Disposable = term.parser.registerOscHandler(7, (data) => {
                 try {
                     let path = data;
@@ -292,8 +443,10 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                     }
                     path = path.replace(/^\/([a-zA-Z]:)/, "$1");
                     if (path && path.trim()) {
-                        latestCwdRef.current = path.trim();
-                        onCwdChangeRef.current(path.trim());
+                        const clean = path.trim();
+                        latestCwdRef.current = clean;
+                        setCurrentCwd(clean);
+                        onCwdChangeRef.current(clean);
                     }
                     return true;
                 } catch {
@@ -303,6 +456,16 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
             const fitAddon = new FitAddon();
             term.loadAddon(fitAddon);
+
+            const onBufferChangeDisposable = term.buffer.onBufferChange((buffer) => {
+                if (!isDisposed) {
+                    const isAlt = buffer.type === "alternate";
+                    setIsAlternateBuffer(isAlt);
+                    if (isAlt) {
+                        term.focus();
+                    }
+                }
+            });
 
             term.open(mountRef.current);
             termRef.current = term;
@@ -414,15 +577,29 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 .then(() => {
                     if (isDisposed) return;
                     syncDimensions();
-                    if (active) {
+                    if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                        promptEditorRef.current?.focus();
+                        setTimeout(() => {
+                            if (!isDisposed && !hasExecutedCommandRef.current && isPromptEditorRef.current) {
+                                termRef.current?.clear();
+                            }
+                        }, 70);
+                        setTimeout(() => {
+                            if (!isDisposed && !hasExecutedCommandRef.current && isPromptEditorRef.current) {
+                                termRef.current?.clear();
+                            }
+                        }, 240);
+                    } else if (active) {
                         term.focus();
                     }
 
                     invoke<string>("get_tab_cwd", { id })
                         .then((p) => {
-                            if (p && !isDisposed) {
-                                latestCwdRef.current = p.trim();
-                                onCwdChangeRef.current(p.trim());
+                            if (p && !isDisposed && p.trim()) {
+                                const clean = p.trim();
+                                latestCwdRef.current = clean;
+                                setCurrentCwd(clean);
+                                onCwdChangeRef.current(clean);
                                 triggerSuggestionQuery("");
                             }
                         })
@@ -439,9 +616,11 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
                 invoke<string>("get_tab_cwd", { id })
                     .then((p) => {
-                        if (p && !isDisposed) {
-                            latestCwdRef.current = p.trim();
-                            onCwdChangeRef.current(p.trim());
+                        if (p && !isDisposed && p.trim()) {
+                            const clean = p.trim();
+                            latestCwdRef.current = clean;
+                            setCurrentCwd(clean);
+                            onCwdChangeRef.current(clean);
                         }
                     })
                     .catch(() => {});
@@ -497,6 +676,8 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 onKeyDisposable.dispose();
                 onDataDisposable.dispose();
                 osc7Disposable.dispose();
+                osc133Disposable.dispose();
+                onBufferChangeDisposable.dispose();
                 if (unicode11Addon) unicode11Addon.dispose();
 
                 if (unlistenOutput) {
@@ -512,6 +693,51 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                 fitRef.current = null;
             };
         }, [id, mountCount]); // <- CRÍTICO: SOLO depende de id y mountCount para evitar destruir el PTY en bucle
+
+        // Atajo global Cmd+E / Ctrl+E para alternar Editor Interactivo <-> TTY Clásico
+        useEffect(() => {
+            if (!active) return;
+            const handleGlobalKeyDown = (e: KeyboardEvent) => {
+                const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+                const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+                if (isCmdOrCtrl && e.key.toLowerCase() === "e") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsPromptEditor((prev) => {
+                        const next = !prev;
+                        try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
+                        if (!next) {
+                            invoke("write_pty", { id, data: "_rhod_enable_classic\r" }).catch(() => {});
+                            termRef.current?.focus();
+                        } else {
+                            if (termRef.current) {
+                                termRef.current.write("\x1b[2K\r");
+                            }
+                        }
+                        return next;
+                    });
+                }
+            };
+            window.addEventListener("keydown", handleGlobalKeyDown);
+            return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+        }, [active]);
+
+        // Sincronizar dimensiones cuando se conmuta entre Editor y TTY Clásico
+        useEffect(() => {
+            if (termRef.current && fitRef.current) {
+                const t = setTimeout(() => {
+                    try {
+                        fitRef.current?.fit();
+                        const cols = termRef.current?.cols ?? 0;
+                        const rows = termRef.current?.rows ?? 0;
+                        if (cols > 0 && rows > 0) {
+                            invoke("resize_pty", { id, rows, cols }).catch(console.error);
+                        }
+                    } catch {}
+                }, 40);
+                return () => clearTimeout(t);
+            }
+        }, [isPromptEditor, isAlternateBuffer, id]);
 
         // Actualizar tamaño y tipo de fuente dinámicamente sin destruir el PTY
         useEffect(() => {
@@ -550,7 +776,11 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
                         if (cols > 0 && rows > 0) {
                             invoke("resize_pty", { id, rows, cols }).catch(console.error);
                         }
-                        termRef.current?.focus();
+                        if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                            promptEditorRef.current?.focus();
+                        } else {
+                            termRef.current?.focus();
+                        }
                         updateGhostPosition();
                         if (inputLineRef.current === "") {
                             triggerSuggestionQuery("");
@@ -572,38 +802,173 @@ export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
 
         return (
             <div
-                ref={mountRef}
                 className="terminal-pane"
-                style={{ display: active ? "block" : "none" }}
-                onClick={handleTerminalClick}
+                style={{
+                    display: active ? "flex" : "none",
+                    flexDirection: "column",
+                    height: "100%",
+                    width: "100%",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    overflow: "hidden",
+                }}
             >
-                {ghostSuggestion && ghostCoords && active && (
-                    <div
-                        className="ghost-suggestion-overlay"
-                        style={{
-                            left: `${ghostCoords.left}px`,
-                            top: `${ghostCoords.top}px`,
-                            height: `${ghostCoords.lineHeight}px`,
-                            lineHeight: `${ghostCoords.lineHeight}px`,
-                            fontSize: `${fontSize}px`,
-                            fontFamily: fontFamily,
-                        }}
-                    >
-                        <span className="ghost-suggestion-text">
-                            {ghostSuggestion.remaining_text}
-                        </span>
-                        <span
-                            className="ghost-suggestion-badge"
-                            title="Presiona Flecha Derecha (→) o Tab para autocompletar"
+                {/* 1. Área de salida de terminal (xterm) */}
+                <div
+                    ref={mountRef}
+                    className={`terminal-output-area ${
+                        isPromptEditor && !isAlternateBuffer ? "is-editor-mode" : ""
+                    }`}
+                    onClick={handleTerminalClick}
+                >
+                    {/* Banner de bienvenida y atajos al abrir una nueva sesión */}
+                    {showWelcome && !isAlternateBuffer && (
+                        <TerminalWelcomeBanner
+                            onDismiss={() => {
+                                setShowWelcome(false);
+                                try {
+                                    localStorage.setItem("rhod_hide_welcome_banner", "true");
+                                } catch {}
+                            }}
+                        />
+                    )}
+
+                    {/* Sugerencia ghost clásica sólo si no está en modo Editor */}
+                    {!isPromptEditor && ghostSuggestion && ghostCoords && active && (
+                        <div
+                            className="ghost-suggestion-overlay"
+                            style={{
+                                left: `${ghostCoords.left}px`,
+                                top: `${ghostCoords.top}px`,
+                                height: `${ghostCoords.lineHeight}px`,
+                                lineHeight: `${ghostCoords.lineHeight}px`,
+                                fontSize: `${fontSize}px`,
+                                fontFamily: fontFamily,
+                            }}
                         >
-                            <span className="ghost-badge-key">→</span>
-                            {ghostSuggestion.hint_type && (
-                                <span className="ghost-badge-type">
-                                    {ghostSuggestion.hint_type}
-                                </span>
-                            )}
-                        </span>
-                    </div>
+                            <span className="ghost-suggestion-text">
+                                {ghostSuggestion.remaining_text}
+                            </span>
+                            <span
+                                className="ghost-suggestion-badge"
+                                title="Presiona Flecha Derecha (→) o Tab para autocompletar"
+                            >
+                                <span className="ghost-badge-key">→</span>
+                                {ghostSuggestion.hint_type && (
+                                    <span className="ghost-badge-type">
+                                        {ghostSuggestion.hint_type}
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Botón flotante para regresar al Editor interactivo cuando se está en modo Clásico */}
+                    {!isPromptEditor && !isAlternateBuffer && (
+                        <button
+                            type="button"
+                            className="prompt-activate-floating-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsPromptEditor(true);
+                                try { localStorage.setItem("rhod_prompt_editor_mode", "true"); } catch {}
+                            }}
+                            title="Activar Editor de Comandos (⌘E o Ctrl+E)"
+                        >
+                            <Sparkles size={12} className="prompt-toggle-icon" />
+                            <span>Editor</span>
+                            <kbd>⌘E</kbd>
+                        </button>
+                    )}
+                </div>
+
+                {/* 2. Editor interactivo de comandos (ratón, multilínea y autocompletado) */}
+                {isPromptEditor && !isAlternateBuffer && (
+                    <PromptEditor
+                        ref={promptEditorRef}
+                        active={active}
+                        cwd={currentCwd}
+                        fontSize={fontSize}
+                        fontFamily={fontFamily}
+                        theme={theme}
+                        onExecute={(cmd) => {
+                            setShowWelcome(false);
+                            hasExecutedCommandRef.current = true;
+                            isAtShellPromptRef.current = false;
+                            const trimmed = cmd.trim();
+
+                            if (!trimmed) {
+                                invoke("write_pty", { id, data: "\n" }).catch(console.error);
+                                return;
+                            }
+
+                            if (trimmed === "clear") {
+                                activeCommandBlockRef.current = null;
+                                termRef.current?.clear();
+                                invoke("write_pty", { id, data: "clear\n" }).catch(console.error);
+                                return;
+                            }
+
+                            invoke("record_command_habit", {
+                                cwd: currentCwd,
+                                command: trimmed,
+                            }).catch(() => {});
+
+                            const displayPath = formatDisplayPath(currentCwd, "");
+                            const term = termRef.current;
+                            let headerBufferY = -1;
+
+                            if (term) {
+                                term.write("\x1b[2K\r");
+                                const buffer = term.buffer.active;
+                                headerBufferY = buffer.baseY + buffer.cursorY;
+                                term.write(`\x1b[38;5;244m${displayPath}\x1b[0m\r\n`);
+                            }
+
+                            activeCommandBlockRef.current = {
+                                cmd: trimmed,
+                                cwd: currentCwd,
+                                displayPath,
+                                startTime: performance.now(),
+                                headerBufferY,
+                                finalized: false,
+                            };
+
+                            invoke("write_pty", { id, data: cmd + "\n" }).catch(console.error);
+                            termRef.current?.scrollToBottom();
+
+                            // Refrescar CWD tras ejecutar el comando para actualizar la insignia en tiempo real
+                            const pollCwd = () => {
+                                invoke<string>("get_tab_cwd", { id })
+                                    .then((p) => {
+                                        if (p && p.trim()) {
+                                            const clean = p.trim();
+                                            latestCwdRef.current = clean;
+                                            setCurrentCwd(clean);
+                                            onCwdChangeRef.current(clean);
+                                        }
+                                    })
+                                    .catch(() => {});
+                            };
+                            setTimeout(pollCwd, 60);
+                            setTimeout(pollCwd, 200);
+                            setTimeout(pollCwd, 600);
+                        }}
+                        onSendRaw={(data) => {
+                            invoke("write_pty", { id, data }).catch(console.error);
+                        }}
+                        onClear={() => {
+                            activeCommandBlockRef.current = null;
+                            termRef.current?.clear();
+                        }}
+                        onToggleClassicMode={() => {
+                            setIsPromptEditor(false);
+                            try { localStorage.setItem("rhod_prompt_editor_mode", "false"); } catch {}
+                            invoke("write_pty", { id, data: "\r" }).catch(() => {});
+                            termRef.current?.focus();
+                        }}
+                    />
                 )}
             </div>
         );

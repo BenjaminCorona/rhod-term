@@ -24,6 +24,7 @@ pub fn run() {
             commands::context::get_context,
             commands::suggestions::get_ghost_suggestion,
             commands::suggestions::record_command_habit,
+            commands::suggestions::get_command_history,
             storage::load_config,
             storage::save_config,
             storage::load_session,

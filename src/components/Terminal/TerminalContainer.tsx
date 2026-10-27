@@ -28,7 +28,16 @@ export function TerminalContainer({
     onFocusActiveTab,
 }: TerminalContainerProps) {
     return (
-        <main className="terminal-container" onClick={onFocusActiveTab}>
+        <main
+            className="terminal-container"
+            onClick={(e) => {
+                // Si el clic ocurrió dentro del editor de comandos inferior, no robar el foco a xterm
+                if ((e.target as HTMLElement).closest(".terminal-prompt-editor")) {
+                    return;
+                }
+                onFocusActiveTab();
+            }}
+        >
             {tabs.map((tab) => (
                 <TerminalPane
                     key={tab.id}

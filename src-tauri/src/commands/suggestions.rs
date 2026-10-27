@@ -186,6 +186,17 @@ pub fn record_command_habit(cwd: String, command: String) {
     save_habits_internal(store);
 }
 
+/// Obtiene el historial reciente de comandos del usuario
+#[tauri::command]
+pub fn get_command_history(limit: Option<usize>) -> Vec<String> {
+    let mut lock = HABIT_STORE.lock().unwrap_or_else(|e| e.into_inner());
+    let store = lock.get_or_insert_with(load_habits_internal);
+    let mut entries = store.entries.clone();
+    entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    let lim = limit.unwrap_or(100);
+    entries.into_iter().take(lim).map(|e| e.command).collect()
+}
+
 /// Busca en los hábitos del usuario según el algoritmo de Frecency
 fn search_habits(cwd: &Path, input: &str) -> Option<GhostSuggestion> {
     let mut lock = HABIT_STORE.lock().unwrap_or_else(|e| e.into_inner());

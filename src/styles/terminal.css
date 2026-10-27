@@ -49,7 +49,7 @@
 }
 
 /* ==========================================================================
-   GHOST SUGGESTIONS OVERLAY (WARP / FISH STYLE)
+   GHOST SUGGESTIONS OVERLAY
    ========================================================================== */
 .ghost-suggestion-overlay {
   position: absolute;
@@ -100,4 +100,402 @@
   color: #9398a6;
   padding-left: 4px;
   border-left: 1px solid #383b45;
+}
+
+/* ==========================================================================
+   INTEGRATED PROMPT EDITOR & WELCOME BANNER
+   ========================================================================== */
+.terminal-output-area {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ocultar el cursor interno de xterm en modo Editor para que el foco visual sea el Textbox */
+.terminal-output-area.is-editor-mode .xterm-cursor-layer,
+.terminal-output-area.is-editor-mode .xterm-cursor,
+.terminal-output-area.is-editor-mode .xterm-cursor-outline,
+.terminal-output-area.is-editor-mode .xterm-cursor-block,
+.terminal-output-area.is-editor-mode .xterm-cursor-bar {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* 1. Terminal Welcome Banner (New Session Hero) */
+.terminal-welcome-banner {
+  margin: 12px 14px 10px 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  user-select: none;
+  animation: fadeInWelcome 0.2s ease-out;
+}
+
+@keyframes fadeInWelcome {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.terminal-welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.terminal-welcome-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.terminal-welcome-logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.terminal-welcome-icon {
+  color: #38bdf8;
+}
+
+.terminal-welcome-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.terminal-welcome-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.terminal-welcome-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.terminal-welcome-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.welcome-key-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 65px;
+}
+
+.welcome-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  min-width: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #cbd5e1;
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.welcome-sep {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.welcome-desc {
+  color: #94a3b8;
+}
+
+.terminal-welcome-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.terminal-welcome-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 10.5px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s ease;
+}
+
+.terminal-welcome-dismiss-btn:hover {
+  color: #cbd5e1;
+  text-decoration: underline;
+}
+
+/* 2. Integrated Terminal Prompt Editor (Seamless, No Container Box) */
+.terminal-prompt-editor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 18px 16px 12px 16px;
+  box-sizing: border-box;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 20;
+  cursor: text;
+}
+
+.prompt-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  user-select: none;
+}
+
+.prompt-path-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.prompt-path-icon {
+  color: #94a3b8;
+}
+
+.prompt-path-text {
+  font-family: inherit;
+}
+
+.prompt-multiline-badge {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.prompt-input-row {
+  position: relative;
+  width: 100%;
+  min-height: 36px;
+  max-height: 260px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.prompt-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 4px 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  caret-color: #10b981;
+  font-family: inherit;
+  position: relative;
+  z-index: 2;
+  display: block;
+}
+
+.prompt-textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.prompt-textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+
+.prompt-ghost-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 2px 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.prompt-mirror-typed {
+  visibility: hidden;
+}
+
+.prompt-ghost-container {
+  display: inline;
+}
+
+.prompt-ghost-text {
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 400;
+}
+
+.prompt-ghost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  background: #202228;
+  border: 1px solid #353842;
+  border-radius: 4px;
+  color: #c4c8d2;
+  font-size: 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 500;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.prompt-ghost-key {
+  color: #cbd5e1;
+}
+
+.prompt-ghost-type {
+  color: #94a3b8;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-left: 3px;
+  border-left: 1px solid #383b45;
+}
+
+.prompt-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  user-select: none;
+}
+
+.prompt-footer-hints {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prompt-hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #64748b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.prompt-kbd {
+  display: inline-block;
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #94a3b8;
+  font-size: 9.5px;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.prompt-footer-actions {
+  display: flex;
+  align-items: center;
+}
+
+.prompt-mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.prompt-mode-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+}
+
+.prompt-toggle-icon {
+  color: #38bdf8;
+}
+
+.prompt-activate-floating-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #1e212b;
+  border: 1px solid #383d4c;
+  border-radius: 6px;
+  color: #cdd3e0;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 30;
+  transition: all 0.15s ease;
+}
+
+.prompt-activate-floating-btn:hover {
+  background: #282c39;
+  border-color: #4b5266;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.prompt-activate-floating-btn kbd {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9px;
 }
