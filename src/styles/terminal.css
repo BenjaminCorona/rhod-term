@@ -322,11 +322,17 @@
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  caret-color: #10b981;
+  color: transparent !important;
+  caret-color: #73daca;
   font-family: inherit;
   position: relative;
   z-index: 2;
   display: block;
+}
+
+.prompt-textarea::selection {
+  background: rgba(115, 218, 202, 0.28);
+  color: transparent;
 }
 
 .prompt-textarea::-webkit-scrollbar {
@@ -348,7 +354,7 @@
   user-select: none;
   white-space: pre-wrap;
   word-break: break-all;
-  padding: 2px 0;
+  padding: 4px 0;
   margin: 0;
   box-sizing: border-box;
   font-family: inherit;
@@ -357,7 +363,54 @@
 }
 
 .prompt-mirror-typed {
-  visibility: hidden;
+  display: inline;
+}
+
+/* Syntax Token Colors (Matching Tokyo Night & Zsh Syntax Highlighting) */
+.tok-command {
+  color: #7dcfff;
+  font-weight: 600;
+}
+
+.tok-subcommand {
+  color: #7aa2f7;
+  font-weight: 500;
+}
+
+.tok-flag {
+  color: #e0af68;
+}
+
+.tok-string {
+  color: #9ece6a;
+}
+
+.tok-variable {
+  color: #bb9af7;
+}
+
+.tok-operator {
+  color: #f7768e;
+  font-weight: 600;
+}
+
+.tok-path {
+  color: #73daca;
+  text-decoration: underline;
+  text-decoration-color: rgba(115, 218, 202, 0.4);
+  text-underline-offset: 2px;
+}
+
+.tok-number {
+  color: #ff9e64;
+}
+
+.tok-text {
+  color: #c0caf5;
+}
+
+.tok-whitespace {
+  color: inherit;
 }
 
 .prompt-ghost-container {

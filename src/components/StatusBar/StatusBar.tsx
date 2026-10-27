@@ -43,7 +43,6 @@ export function StatusBar({
                         title={`Configuración y atajos (${modSymbol}, o ${modSymbol}K)`}
                     >
                         <SlidersHorizontal size={12} />
-                        <span>Configuración</span>
                         <kbd>{modSymbol},</kbd>
                     </button>
                 </div>

@@ -3,6 +3,7 @@ import {
     useRef,
     useEffect,
     useCallback,
+    useMemo,
     useImperativeHandle,
     forwardRef,
     KeyboardEvent,
@@ -35,6 +36,156 @@ export interface PromptEditorProps {
     onToggleClassicMode: () => void;
 }
 
+interface SyntaxToken {
+    text: string;
+    type:
+        | "command"
+        | "subcommand"
+        | "flag"
+        | "string"
+        | "variable"
+        | "operator"
+        | "path"
+        | "number"
+        | "text"
+        | "whitespace";
+}
+
+const SUBCMD_CLIS = new Set([
+    "git",
+    "cargo",
+    "docker",
+    "pnpm",
+    "npm",
+    "yarn",
+    "bun",
+    "brew",
+    "systemctl",
+    "kubectl",
+    "aws",
+    "gcloud",
+    "rustup",
+    "tauri",
+    "nest",
+    "pip",
+    "python",
+    "python3",
+    "node",
+    "go",
+]);
+
+function tokenizeShellCommand(input: string): SyntaxToken[] {
+    const tokens: SyntaxToken[] = [];
+    let i = 0;
+    const len = input.length;
+    let isCommandPosition = true;
+    let activeCmd = "";
+
+    while (i < len) {
+        // 1. Espacios en blanco y saltos de línea
+        if (/\s/.test(input[i])) {
+            const start = i;
+            while (i < len && /\s/.test(input[i])) {
+                if (input[i] === "\n") isCommandPosition = true;
+                i++;
+            }
+            tokens.push({ text: input.slice(start, i), type: "whitespace" });
+            continue;
+        }
+
+        // 2. Operadores de encadenamiento y tuberías: &&, ||, >>, ;, |, >, <, &
+        if (
+            input.slice(i, i + 2) === "&&" ||
+            input.slice(i, i + 2) === "||" ||
+            input.slice(i, i + 2) === ">>"
+        ) {
+            tokens.push({ text: input.slice(i, i + 2), type: "operator" });
+            i += 2;
+            isCommandPosition = true;
+            activeCmd = "";
+            continue;
+        }
+        if (";|><&".includes(input[i])) {
+            tokens.push({ text: input[i], type: "operator" });
+            i++;
+            isCommandPosition = true;
+            activeCmd = "";
+            continue;
+        }
+
+        // 3. Cadenas con comillas simples o dobles
+        if (input[i] === '"' || input[i] === "'") {
+            const quote = input[i];
+            const start = i;
+            i++;
+            while (i < len) {
+                if (input[i] === "\\" && quote === '"') {
+                    i += 2;
+                } else if (input[i] === quote) {
+                    i++;
+                    break;
+                } else {
+                    i++;
+                }
+            }
+            tokens.push({ text: input.slice(start, i), type: "string" });
+            isCommandPosition = false;
+            continue;
+        }
+
+        // 4. Variables de entorno: $VAR o ${VAR}
+        if (input[i] === "$") {
+            const start = i;
+            i++;
+            if (i < len && input[i] === "{") {
+                while (i < len && input[i] !== "}") i++;
+                if (i < len) i++;
+            } else {
+                while (i < len && /[a-zA-Z0-9_?]/.test(input[i])) i++;
+            }
+            tokens.push({ text: input.slice(start, i), type: "variable" });
+            isCommandPosition = false;
+            continue;
+        }
+
+        // 5. Palabras normales: comandos, subcomandos, banderas, rutas, números, texto
+        const start = i;
+        while (i < len && !/[\s;|&><"']/.test(input[i])) {
+            i++;
+        }
+        const word = input.slice(start, i);
+
+        if (word.startsWith("-")) {
+            tokens.push({ text: word, type: "flag" });
+        } else if (isCommandPosition) {
+            tokens.push({ text: word, type: "command" });
+            activeCmd = word.toLowerCase();
+            isCommandPosition = false;
+        } else if (
+            activeCmd &&
+            SUBCMD_CLIS.has(activeCmd) &&
+            !word.includes("/") &&
+            !/^\d+$/.test(word)
+        ) {
+            tokens.push({ text: word, type: "subcommand" });
+            activeCmd = "";
+        } else if (
+            word.includes("/") ||
+            word.startsWith("./") ||
+            word.startsWith("../") ||
+            word.startsWith("~")
+        ) {
+            tokens.push({ text: word, type: "path" });
+        } else if (/^\d+$/.test(word)) {
+            tokens.push({ text: word, type: "number" });
+        } else {
+            tokens.push({ text: word, type: "text" });
+        }
+    }
+
+    return tokens;
+}
+
 export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
     (
         {
@@ -42,7 +193,7 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
             cwd,
             fontSize,
             fontFamily,
-            theme,
+            theme: _theme,
             onExecute,
             onSendRaw,
             onClear,
@@ -56,7 +207,17 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
     const [ghostSuggestion, setGhostSuggestion] = useState<GhostSuggestion | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const mirrorRef = useRef<HTMLDivElement>(null);
     const queryTimerRef = useRef<number | null>(null);
+
+    const syntaxTokens = useMemo(() => tokenizeShellCommand(value), [value]);
+
+    const handleScroll = useCallback(() => {
+        if (textareaRef.current && mirrorRef.current) {
+            mirrorRef.current.scrollTop = textareaRef.current.scrollTop;
+            mirrorRef.current.scrollLeft = textareaRef.current.scrollLeft;
+        }
+    }, []);
     const draftRef = useRef<string>("");
     const historyIndexRef = useRef<number>(-1);
     const historyRef = useRef<string[]>([]);
@@ -368,6 +529,7 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
             {/* 2. Fila del editor: Textarea transparente con ratón nativo + Espejo Ghost Text (SIN placeholder overlapping) */}
             <div className="prompt-input-row">
                 <div
+                    ref={mirrorRef}
                     className="prompt-ghost-mirror"
                     aria-hidden="true"
                     style={{
@@ -375,7 +537,13 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
                         lineHeight: 1.5,
                     }}
                 >
-                    <span className="prompt-mirror-typed">{value}</span>
+                    <span className="prompt-mirror-typed">
+                        {syntaxTokens.map((tok, idx) => (
+                            <span key={idx} className={`tok-${tok.type}`}>
+                                {tok.text}
+                            </span>
+                        ))}
+                    </span>
                     {ghostSuggestion && (
                         <span className="prompt-ghost-container">
                             <span className="prompt-ghost-text">
@@ -403,6 +571,7 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
+                    onScroll={handleScroll}
                     onMouseDown={(e) => {
                         e.stopPropagation();
                     }}
@@ -417,7 +586,6 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
                     autoCorrect="off"
                     style={{
                         fontSize: `${fontSize}px`,
-                        color: theme.foreground || "#e2e5eb",
                         lineHeight: 1.5,
                     }}
                 />
