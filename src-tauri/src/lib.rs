@@ -20,6 +20,7 @@ pub fn run() {
             commands::pty::write_pty,
             commands::pty::resize_pty,
             commands::pty::close_pty,
+            commands::pty::get_session_busy_state,
             commands::context::get_tab_cwd,
             commands::context::get_context,
             commands::suggestions::get_ghost_suggestion,

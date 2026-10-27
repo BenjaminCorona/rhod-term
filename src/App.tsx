@@ -26,6 +26,14 @@ export default function App() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("general");
 
+    const [busyTabIds, setBusyTabIds] = useState<Record<string, boolean>>({});
+    const handleTabBusyChange = useCallback((tabId: string, isBusy: boolean) => {
+        setBusyTabIds((prev) => {
+            if (prev[tabId] === isBusy) return prev;
+            return { ...prev, [tabId]: isBusy };
+        });
+    }, []);
+
     // 1. Gestión de pestañas y rutas CWD
     const {
         tabs,
@@ -232,6 +240,7 @@ export default function App() {
                 activeTabId={activeTabId}
                 selectedTabIds={selectedTabIds}
                 closingTabIds={closingTabIds}
+                busyTabIds={busyTabIds}
                 unbundlingTabIds={unbundlingTabIds}
                 onTriggerUnbundleAnimation={triggerUnbundleAnimation}
                 modSymbol={modSymbol}
@@ -265,6 +274,7 @@ export default function App() {
                 theme={currentTheme.terminal}
                 promptEditorMode={promptEditorMode}
                 onTogglePromptEditorMode={handleTogglePromptEditorMode}
+                onTabBusyChange={handleTabBusyChange}
                 onCwdChange={handleCwdUpdate}
                 tabRefs={tabRefs}
                 onFocusActiveTab={() => tabRefs.current[activeTabId]?.focus()}

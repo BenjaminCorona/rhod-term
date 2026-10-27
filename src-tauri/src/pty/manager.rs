@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use super::integration::{ensure_shell_assets_extracted, setup_shell_integration};
 use super::session::PtySession;
 use crate::error::AppError;
@@ -9,6 +10,19 @@ use std::{
     thread,
 };
 use tauri::{AppHandle, Emitter};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionBusyInfo {
+    pub is_busy: bool,
+    pub foreground_process: Option<String>,
+}
+
+#[cfg(target_os = "macos")]
+unsafe extern "C" {
+    fn proc_listchildpids(ppid: i32, buffer: *mut i32, buffersize: i32) -> i32;
+    fn proc_name(pid: i32, buffer: *mut u8, buffersize: u32) -> i32;
+    fn getpgid(pid: i32) -> i32;
+}
 
 /// Gestor centralizado del ciclo de vida y streaming de terminales PTY
 #[derive(Default, Clone)]
@@ -208,6 +222,244 @@ impl PtyManager {
         Ok(sessions.get(id).and_then(|s| s.pid))
     }
 
+    /// Determina si la sesión PTY tiene procesos hijos en ejecución (terminal ocupada)
+    pub fn get_session_busy_state(&self, id: &str) -> Result<SessionBusyInfo, AppError> {
+        let sessions = self.sessions.lock()?;
+        let Some(session) = sessions.get(id) else {
+            return Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            });
+        };
+
+        let Some(shell_pid) = session.pid else {
+            return Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            });
+        };
+
+        #[cfg(target_os = "macos")]
+        {
+            let mut queue = std::collections::VecDeque::new();
+            queue.push_back(shell_pid as i32);
+            let mut all_descendants = Vec::new();
+            let mut child_pids = [0i32; 64];
+
+            while let Some(current_pid) = queue.pop_front() {
+                let count = unsafe {
+                    proc_listchildpids(
+                        current_pid,
+                        child_pids.as_mut_ptr(),
+                        (child_pids.len() * std::mem::size_of::<i32>()) as i32,
+                    )
+                };
+
+                if count > 0 {
+                    let num_children = count.min(child_pids.len() as i32) as usize;
+                    for &c_pid in &child_pids[..num_children] {
+                        if c_pid > 0 && !all_descendants.contains(&c_pid) {
+                            all_descendants.push(c_pid);
+                            queue.push_back(c_pid);
+                        }
+                    }
+                }
+            }
+
+            if !all_descendants.is_empty() {
+                // Obtener el nombre del proceso hoja más reciente (ej. node, nest, cargo, git)
+                let target_pid = *all_descendants.last().unwrap();
+                let mut name_buf = [0u8; 256];
+                let len = unsafe {
+                    proc_name(
+                        target_pid,
+                        name_buf.as_mut_ptr(),
+                        name_buf.len() as u32,
+                    )
+                };
+                let process_name = if len > 0 {
+                    String::from_utf8_lossy(&name_buf[..len as usize]).to_string()
+                } else {
+                    "proceso".to_string()
+                };
+
+                return Ok(SessionBusyInfo {
+                    is_busy: true,
+                    foreground_process: Some(process_name),
+                });
+            }
+
+            // También comprobar el grupo de procesos en primer plano del master PTY si estuviera disponible
+            #[cfg(unix)]
+            if let Some(leader) = session.master.process_group_leader() {
+                let shell_pgid = unsafe { getpgid(shell_pid as i32) };
+                if leader > 0 && leader != shell_pid as i32 && leader != shell_pgid {
+                    let mut name_buf = [0u8; 256];
+                    let len = unsafe {
+                        proc_name(
+                            leader,
+                            name_buf.as_mut_ptr(),
+                            name_buf.len() as u32,
+                        )
+                    };
+                    let process_name = if len > 0 {
+                        String::from_utf8_lossy(&name_buf[..len as usize]).to_string()
+                    } else {
+                        "proceso".to_string()
+                    };
+
+                    return Ok(SessionBusyInfo {
+                        is_busy: true,
+                        foreground_process: Some(process_name),
+                    });
+                }
+            }
+
+            Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            })
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            let mut queue = std::collections::VecDeque::new();
+            queue.push_back(shell_pid);
+            let mut all_descendants = Vec::new();
+
+            while let Some(curr_pid) = queue.pop_front() {
+                let path = format!("/proc/{}/task/{}/children", curr_pid, curr_pid);
+                if let Ok(children_str) = std::fs::read_to_string(&path) {
+                    for token in children_str.split_whitespace() {
+                        if let Ok(child_pid) = token.parse::<u32>() {
+                            if child_pid > 0 && !all_descendants.contains(&child_pid) {
+                                all_descendants.push(child_pid);
+                                queue.push_back(child_pid);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !all_descendants.is_empty() {
+                let target_pid = *all_descendants.last().unwrap();
+                let comm_path = format!("/proc/{}/comm", target_pid);
+                let process_name = std::fs::read_to_string(&comm_path)
+                    .map(|s| s.trim().to_string())
+                    .unwrap_or_else(|_| "proceso".to_string());
+
+                return Ok(SessionBusyInfo {
+                    is_busy: true,
+                    foreground_process: Some(process_name),
+                });
+            }
+
+            #[cfg(unix)]
+            if let Some(leader) = session.master.process_group_leader() {
+                if leader > 0 && leader as u32 != shell_pid {
+                    let comm_path = format!("/proc/{}/comm", leader);
+                    let process_name = std::fs::read_to_string(&comm_path)
+                        .map(|s| s.trim().to_string())
+                        .unwrap_or_else(|_| "proceso".to_string());
+
+                    return Ok(SessionBusyInfo {
+                        is_busy: true,
+                        foreground_process: Some(process_name),
+                    });
+                }
+            }
+
+            Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            })
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+            use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+                CreateToolhelp32Snapshot, Process32First, Process32Next, PROCESSENTRY32,
+                TH32CS_SNAPPROCESS,
+            };
+
+            let mut all_descendants = Vec::new();
+            let mut queue = std::collections::VecDeque::new();
+            queue.push_back(shell_pid);
+
+            let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+            if snapshot != INVALID_HANDLE_VALUE {
+                let mut entries = Vec::new();
+                let mut entry: PROCESSENTRY32 = unsafe { std::mem::zeroed() };
+                entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
+
+                if unsafe { Process32First(snapshot, &mut entry) } != 0 {
+                    loop {
+                        let name_len = entry
+                            .szExeFile
+                            .iter()
+                            .position(|&c| c == 0)
+                            .unwrap_or(entry.szExeFile.len());
+                        let name = String::from_utf8_lossy(
+                            &entry.szExeFile[..name_len]
+                                .iter()
+                                .map(|&c| c as u8)
+                                .collect::<Vec<u8>>(),
+                        )
+                        .to_string();
+
+                        entries.push((entry.th32ProcessID, entry.th32ParentProcessID, name));
+                        if unsafe { Process32Next(snapshot, &mut entry) } == 0 {
+                            break;
+                        }
+                    }
+                }
+                unsafe { CloseHandle(snapshot) };
+
+                let mut last_name = None;
+                while let Some(curr_pid) = queue.pop_front() {
+                    for &(pid, parent_pid, ref name) in &entries {
+                        if parent_pid == curr_pid && pid > 0 && !all_descendants.contains(&pid) {
+                            all_descendants.push(pid);
+                            queue.push_back(pid);
+                            last_name = Some(name.clone());
+                        }
+                    }
+                }
+
+                if !all_descendants.is_empty() {
+                    return Ok(SessionBusyInfo {
+                        is_busy: true,
+                        foreground_process: last_name,
+                    });
+                }
+            }
+
+            Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            })
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+        {
+            #[cfg(unix)]
+            if let Some(leader) = session.master.process_group_leader() {
+                if leader > 0 && leader as u32 != shell_pid {
+                    return Ok(SessionBusyInfo {
+                        is_busy: true,
+                        foreground_process: Some("proceso".to_string()),
+                    });
+                }
+            }
+
+            Ok(SessionBusyInfo {
+                is_busy: false,
+                foreground_process: None,
+            })
+        }
+    }
+
     /// Resuelve el shell predeterminado del sistema operativo
     fn resolve_shell() -> String {
         #[cfg(target_os = "windows")]
@@ -233,6 +485,15 @@ impl PtyManager {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    #[test]
+    fn test_busy_state_non_existent_session() {
+        let manager = PtyManager::new();
+        let busy = manager.get_session_busy_state("non-existent").unwrap();
+        assert_eq!(busy.is_busy, false);
+        assert_eq!(busy.foreground_process, None);
+    }
+
     #[test]
     fn test_utf8_streaming_no_corrupted_replacements() {
         let sample = "Inicio ──────────────────────────────────────────────────────── Fin";

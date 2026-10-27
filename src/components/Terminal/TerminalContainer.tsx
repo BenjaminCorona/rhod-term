@@ -12,6 +12,7 @@ interface TerminalContainerProps {
     theme: ITheme;
     promptEditorMode: boolean;
     onTogglePromptEditorMode: () => void;
+    onTabBusyChange?: (tabId: string, isBusy: boolean) => void;
     onCwdChange: (tabId: string, path: string) => void;
     tabRefs: React.MutableRefObject<Record<string, TerminalHandle | null>>;
     onFocusActiveTab: () => void;
@@ -27,6 +28,7 @@ export function TerminalContainer({
     theme,
     promptEditorMode,
     onTogglePromptEditorMode,
+    onTabBusyChange,
     onCwdChange,
     tabRefs,
     onFocusActiveTab,
@@ -54,6 +56,7 @@ export function TerminalContainer({
                     theme={theme}
                     isPromptEditor={promptEditorMode}
                     onTogglePromptEditorMode={onTogglePromptEditorMode}
+                    onBusyChange={(isBusy) => onTabBusyChange?.(tab.id, isBusy)}
                     onCwdChange={(newPath) => onCwdChange(tab.id, newPath)}
                     ref={(el) => {
                         tabRefs.current[tab.id] = el;

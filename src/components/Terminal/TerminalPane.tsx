@@ -48,11 +48,12 @@ interface TerminalPaneProps {
     theme: ITheme;
     isPromptEditor: boolean;
     onTogglePromptEditorMode: () => void;
+    onBusyChange?: (isBusy: boolean) => void;
     onCwdChange: (path: string) => void;
 }
 
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
-    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, isPromptEditor, onTogglePromptEditorMode, onCwdChange }, ref) => {
+    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, isPromptEditor, onTogglePromptEditorMode, onBusyChange, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
         const promptEditorRef = useRef<PromptEditorHandle>(null);
         const termRef = useRef<Terminal | null>(null);
@@ -98,6 +99,34 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
 
         const isAtShellPromptRef = useRef(true);
         const hasExecutedCommandRef = useRef(false);
+        const hasShellIntegrationRef = useRef(false);
+
+        // Estado reactivo de ejecución de comandos (terminal ocupada)
+        const [isExecuting, setIsExecuting] = useState<boolean>(false);
+        const [, setRunningCommand] = useState<string>("");
+        const [runningElapsedSec, setRunningElapsedSec] = useState<number>(0);
+        const isExecutingRef = useRef(false);
+        isExecutingRef.current = isExecuting;
+
+        // Notificar al componente padre el estado de ocupación para el indicador en la pestaña
+        useEffect(() => {
+            onBusyChange?.(isExecuting);
+        }, [isExecuting, onBusyChange]);
+
+        // Temporizador de duración en segundos enteros mientras el proceso está activo
+        useEffect(() => {
+            if (!isExecuting) {
+                setRunningElapsedSec(0);
+                return;
+            }
+            const startTime = performance.now();
+            const timer = setInterval(() => {
+                setRunningElapsedSec(Math.floor((performance.now() - startTime) / 1000));
+            }, 250);
+            return () => clearInterval(timer);
+        }, [isExecuting]);
+
+
 
         // Estado y referencias para Ghost Text (sugerencias inline)
         const [ghostSuggestion, setGhostSuggestion] = useState<GhostSuggestion | null>(null);
@@ -164,6 +193,39 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                 term.write(`\x1b[38;5;242m ${durStr}\x1b[0m\r\n`);
             }
         }, []);
+
+        // Verificación de respaldo periódica con el backend de procesos del PTY
+        useEffect(() => {
+            if (!isExecuting) return;
+            let consecutiveIdleCount = 0;
+            const interval = setInterval(() => {
+                invoke<{ is_busy: boolean; foreground_process?: string }>("get_session_busy_state", { id })
+                    .then((res) => {
+                        if (res.is_busy) {
+                            consecutiveIdleCount = 0;
+                            if (res.foreground_process) {
+                                setRunningCommand((prev) => res.foreground_process || prev);
+                            }
+                        } else {
+                            consecutiveIdleCount += 1;
+                            // Si la integración con el shell (OSC 133) está activa, ZSH emitirá OSC 133;A de manera definitiva al terminar.
+                            // Solo si NO hay integración de shell, o tras inactividad prolongada y confirmada, finalizamos.
+                            const elapsed = performance.now() - (activeCommandBlockRef.current?.startTime || 0);
+                            const shouldFinalize = !hasShellIntegrationRef.current
+                                ? consecutiveIdleCount >= 2 && elapsed > 1000
+                                : consecutiveIdleCount >= 6 && elapsed > 3000;
+
+                            if (shouldFinalize && isExecutingRef.current) {
+                                setIsExecuting(false);
+                                setRunningCommand("");
+                                finalizeCommandBlock();
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 600);
+            return () => clearInterval(interval);
+        }, [isExecuting, id, finalizeCommandBlock]);
 
 
 
@@ -316,14 +378,12 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                                 if (!hasExecutedCommandRef.current) {
                                     // Pestaña inicial recién abierta: limpiar completamente para que se vea 100% limpia
                                     termRef.current.clear();
-                                } else if (isAtShellPromptRef.current) {
-                                    // Borrar la línea de entrada/prompt residual en xterm para que el histórico parezca un chat
+                                } else if (isAtShellPromptRef.current && !isExecutingRef.current) {
+                                    // Borrar la línea de entrada/prompt residual en xterm solo cuando el shell esté libre en el prompt
                                     termRef.current.write("\x1b[2K\r");
-                                    isAtShellPromptRef.current = false;
                                 }
                             }
-                            finalizeCommandBlock();
-                            if (inputLineRef.current === "") {
+                            if (!isExecutingRef.current && inputLineRef.current === "") {
                                 triggerSuggestionQuery("");
                             }
                         }
@@ -368,11 +428,13 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                         return false;
                     }
 
-                    // Si estamos en modo Editor, ninguna otra pulsación debe ir a xterm directamente
+                    // Si estamos en modo Editor, redirigir pulsaciones al PromptEditor solo si NO hay un proceso ejecutándose
                     if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
-                        // Redirigir el foco al PromptEditor y bloquear el evento en xterm
-                        promptEditorRef.current?.focus();
-                        return false;
+                        if (!isExecutingRef.current) {
+                            promptEditorRef.current?.focus();
+                            return false;
+                        }
+                        // Si hay un proceso ejecutándose, permitir que las teclas lleguen a xterm directamente hacia el proceso hijo
                     }
 
                     // Si hay sugerencia ghost activa y se presiona Flecha Derecha o Tab:
@@ -419,11 +481,16 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
 
             // Parser OSC 133 para tracking de comandos y duración
             const osc133Disposable = term.parser.registerOscHandler(133, (data) => {
+                hasShellIntegrationRef.current = true;
                 if (data.startsWith("D;")) {
                     const dur = data.slice(2);
                     finalizeCommandBlock(dur);
+                    setIsExecuting(false);
+                    setRunningCommand("");
                 } else if (data.startsWith("A")) {
                     isAtShellPromptRef.current = true;
+                    setIsExecuting(false);
+                    setRunningCommand("");
                     if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
                         if (!hasExecutedCommandRef.current) {
                             term.clear();
@@ -434,6 +501,11 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                     finalizeCommandBlock();
                 } else if (data.startsWith("C")) {
                     isAtShellPromptRef.current = false;
+                    setIsExecuting(true);
+                    if (data.startsWith("C;")) {
+                        const cmd = data.slice(2).trim();
+                        if (cmd) setRunningCommand(cmd);
+                    }
                 }
                 return true;
             });
@@ -791,6 +863,14 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
 
         // Al hacer clic en la terminal, si la línea está vacía, mostrar sugerencia
         const handleTerminalClick = () => {
+            if (isExecutingRef.current) {
+                termRef.current?.focus();
+                return;
+            }
+            if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                promptEditorRef.current?.focus();
+                return;
+            }
             if (inputLineRef.current === "" && !ghostSuggestionRef.current) {
                 triggerSuggestionQuery("");
             }
@@ -863,87 +943,120 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
 
                 </div>
 
-                {/* 2. Editor interactivo de comandos (ratón, multilínea y autocompletado) */}
+                {/* 2. Modo Editor: Si hay un proceso en ejecución se muestra la Barra de Estado de Ejecución;
+                       si la terminal está libre en el prompt, se muestra el PromptEditor interactivo */}
                 {isPromptEditor && !isAlternateBuffer && (
-                    <PromptEditor
-                        ref={promptEditorRef}
-                        active={active}
-                        cwd={currentCwd}
-                        fontSize={fontSize}
-                        fontFamily={fontFamily}
-                        theme={theme}
-                        onExecute={(cmd) => {
-                            setShowWelcome(false);
-                            hasExecutedCommandRef.current = true;
-                            isAtShellPromptRef.current = false;
-                            const trimmed = cmd.trim();
+                    isExecuting ? (
+                        <div
+                            className="terminal-running-minimal"
+                            style={{ fontFamily }}
+                            onClick={() => termRef.current?.focus()}
+                        >
+                            <span className="running-time-text">
+                                {runningElapsedSec < 60
+                                    ? `${runningElapsedSec}s`
+                                    : `${Math.floor(runningElapsedSec / 60)}m ${runningElapsedSec % 60}s`}
+                            </span>
 
-                            if (!trimmed) {
-                                invoke("write_pty", { id, data: "\n" }).catch(console.error);
-                                return;
-                            }
+                            <button
+                                type="button"
+                                className="running-cancel-btn-solid"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    invoke("write_pty", { id, data: "" }).catch(console.error);
+                                    termRef.current?.focus();
+                                }}
+                                title="Interrumpir proceso (Ctrl+C)"
+                            >
+                                <span className="running-cancel-key">^C</span>
+                                <span>Interrumpir</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <PromptEditor
+                            ref={promptEditorRef}
+                            active={active}
+                            cwd={currentCwd}
+                            fontSize={fontSize}
+                            fontFamily={fontFamily}
+                            theme={theme}
+                            onExecute={(cmd) => {
+                                setShowWelcome(false);
+                                hasExecutedCommandRef.current = true;
+                                isAtShellPromptRef.current = false;
+                                const trimmed = cmd.trim();
 
-                            if (trimmed === "clear") {
+                                if (!trimmed) {
+                                    invoke("write_pty", { id, data: "\n" }).catch(console.error);
+                                    return;
+                                }
+
+                                if (trimmed === "clear") {
+                                    activeCommandBlockRef.current = null;
+                                    termRef.current?.clear();
+                                    invoke("write_pty", { id, data: "clear\n" }).catch(console.error);
+                                    return;
+                                }
+
+                                setIsExecuting(true);
+                                setRunningCommand(trimmed);
+
+                                invoke("record_command_habit", {
+                                    cwd: currentCwd,
+                                    command: trimmed,
+                                    }).catch(() => {});
+
+                                const displayPath = formatDisplayPath(currentCwd, "");
+                                const term = termRef.current;
+                                let headerBufferY = -1;
+
+                                if (term) {
+                                    term.write("\x1b[2K\r");
+                                    const buffer = term.buffer.active;
+                                    headerBufferY = buffer.baseY + buffer.cursorY;
+                                    term.write(`\x1b[38;5;244m${displayPath}\x1b[0m\r\n`);
+                                }
+
+                                activeCommandBlockRef.current = {
+                                    cmd: trimmed,
+                                    cwd: currentCwd,
+                                    displayPath,
+                                    startTime: performance.now(),
+                                    headerBufferY,
+                                    finalized: false,
+                                };
+
+                                invoke("write_pty", { id, data: cmd + "\n" }).catch(console.error);
+                                termRef.current?.scrollToBottom();
+                                termRef.current?.focus();
+
+                                // Refrescar CWD tras ejecutar el comando para actualizar la insignia en tiempo real
+                                const pollCwd = () => {
+                                    invoke<string>("get_tab_cwd", { id })
+                                        .then((p) => {
+                                            if (p && p.trim()) {
+                                                const clean = p.trim();
+                                                latestCwdRef.current = clean;
+                                                setCurrentCwd(clean);
+                                                onCwdChangeRef.current(clean);
+                                            }
+                                        })
+                                        .catch(() => {});
+                                };
+                                setTimeout(pollCwd, 60);
+                                setTimeout(pollCwd, 200);
+                                setTimeout(pollCwd, 600);
+                            }}
+                            onSendRaw={(data) => {
+                                invoke("write_pty", { id, data }).catch(console.error);
+                            }}
+                            onClear={() => {
                                 activeCommandBlockRef.current = null;
                                 termRef.current?.clear();
-                                invoke("write_pty", { id, data: "clear\n" }).catch(console.error);
-                                return;
-                            }
-
-                            invoke("record_command_habit", {
-                                cwd: currentCwd,
-                                command: trimmed,
-                            }).catch(() => {});
-
-                            const displayPath = formatDisplayPath(currentCwd, "");
-                            const term = termRef.current;
-                            let headerBufferY = -1;
-
-                            if (term) {
-                                term.write("\x1b[2K\r");
-                                const buffer = term.buffer.active;
-                                headerBufferY = buffer.baseY + buffer.cursorY;
-                                term.write(`\x1b[38;5;244m${displayPath}\x1b[0m\r\n`);
-                            }
-
-                            activeCommandBlockRef.current = {
-                                cmd: trimmed,
-                                cwd: currentCwd,
-                                displayPath,
-                                startTime: performance.now(),
-                                headerBufferY,
-                                finalized: false,
-                            };
-
-                            invoke("write_pty", { id, data: cmd + "\n" }).catch(console.error);
-                            termRef.current?.scrollToBottom();
-
-                            // Refrescar CWD tras ejecutar el comando para actualizar la insignia en tiempo real
-                            const pollCwd = () => {
-                                invoke<string>("get_tab_cwd", { id })
-                                    .then((p) => {
-                                        if (p && p.trim()) {
-                                            const clean = p.trim();
-                                            latestCwdRef.current = clean;
-                                            setCurrentCwd(clean);
-                                            onCwdChangeRef.current(clean);
-                                        }
-                                    })
-                                    .catch(() => {});
-                            };
-                            setTimeout(pollCwd, 60);
-                            setTimeout(pollCwd, 200);
-                            setTimeout(pollCwd, 600);
-                        }}
-                        onSendRaw={(data) => {
-                            invoke("write_pty", { id, data }).catch(console.error);
-                        }}
-                        onClear={() => {
-                            activeCommandBlockRef.current = null;
-                            termRef.current?.clear();
-                        }}
-                        onToggleClassicMode={onTogglePromptEditorMode}
-                    />
+                            }}
+                            onToggleClassicMode={onTogglePromptEditorMode}
+                        />
+                    )
                 )}
             </div>
         );

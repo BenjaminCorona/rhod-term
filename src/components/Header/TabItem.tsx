@@ -12,6 +12,7 @@ interface TabItemProps {
     isNew?: boolean;
     isClosing?: boolean;
     isMultiSelected?: boolean;
+    isBusy?: boolean;
     isGroupCollapsed?: boolean;
     isBundleLeader?: boolean;
     isBundleFollower?: boolean;
@@ -36,6 +37,7 @@ export function TabItem({
     isNew = false,
     isClosing = false,
     isMultiSelected = false,
+    isBusy: _isBusy = false,
     isGroupCollapsed = false,
     isBundleLeader = false,
     isBundleFollower = false,

@@ -14,6 +14,7 @@ interface HeaderProps {
     groups?: TabGroup[];
     activeTabId: string;
     selectedTabIds?: Set<string>;
+    busyTabIds?: Record<string, boolean>;
     modSymbol: string;
     isMac: boolean;
     onSelectTab: (id: string) => void;
@@ -106,6 +107,7 @@ export function Header({
     onReorderGroup,
     onMoveGroupToIndex: _onMoveGroupToIndex,
     closingTabIds,
+    busyTabIds = {},
     unbundlingTabIds,
     onTriggerUnbundleAnimation,
 }: HeaderProps) {
@@ -941,6 +943,7 @@ export function Header({
                                     isDragging={isBeingDragged}
                                     isNew={tab.id === newTabId}
                                     isClosing={closingTabIds?.has(tab.id)}
+                                    isBusy={Boolean(busyTabIds[tab.id])}
                                     style={itemStyle}
                                     onPointerDown={(e) => {
                                         if (!isItemCollapsed && visibleIdx !== -1) {

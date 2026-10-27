@@ -37,3 +37,12 @@ pub fn resize_pty(
 pub fn close_pty(id: String, state: State<'_, AppState>) -> Result<(), AppError> {
     state.pty_manager.close_session(&id)
 }
+
+/// Controlador IPC para consultar si la terminal está ejecutando un proceso en primer plano
+#[tauri::command]
+pub fn get_session_busy_state(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<crate::pty::manager::SessionBusyInfo, AppError> {
+    state.pty_manager.get_session_busy_state(&id)
+}

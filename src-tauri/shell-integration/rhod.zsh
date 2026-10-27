@@ -60,8 +60,8 @@ _rhod_last_duration=""
 
 _rhod_preexec() {
   _rhod_cmd_start_time=$EPOCHREALTIME
-  # Notificar inicio de comando mediante OSC 133;C
-  printf "\e]133;C\a"
+  # Notificar inicio de comando mediante OSC 133;C junto al comando ejecutado
+  printf "\e]133;C;%s\a" "$1"
 }
 
 _rhod_precmd() {
