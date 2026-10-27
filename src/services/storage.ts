@@ -5,6 +5,7 @@ export interface UserConfig {
     font_size: number;
     font_id: string;
     theme_id: string;
+    prompt_editor_mode: boolean;
 }
 
 export interface SessionData {
@@ -26,6 +27,9 @@ export async function loadConfig(): Promise<UserConfig | null> {
     try {
         const conf = await invoke<UserConfig | null>("load_config");
         if (conf) {
+            if (conf.prompt_editor_mode === undefined) {
+                conf.prompt_editor_mode = true;
+            }
             cachedConfig = conf;
             return conf;
         }
@@ -39,11 +43,13 @@ export async function loadConfig(): Promise<UserConfig | null> {
         const savedFont = localStorage.getItem("rhod_font_id");
         const savedTheme = localStorage.getItem("rhod_theme_id");
 
-        if (savedSize || savedFont || savedTheme) {
+        const savedEditor = localStorage.getItem("rhod_prompt_editor_mode");
+        if (savedSize || savedFont || savedTheme || savedEditor !== null) {
             const migrated: UserConfig = {
                 font_size: savedSize ? parseFloat(savedSize) || 14.0 : 14.0,
                 font_id: savedFont || "meslo",
                 theme_id: savedTheme || "rhod-dark",
+                prompt_editor_mode: savedEditor !== null ? savedEditor === "true" : true,
             };
             cachedConfig = migrated;
             invoke("save_config", { config: migrated }).catch(console.error);
@@ -65,6 +71,7 @@ export function saveConfigDebounced(updates: Partial<UserConfig>) {
             font_size: 14.0,
             font_id: "meslo",
             theme_id: "rhod-dark",
+            prompt_editor_mode: true,
         };
     }
     cachedConfig = { ...cachedConfig, ...updates };

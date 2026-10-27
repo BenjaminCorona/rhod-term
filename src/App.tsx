@@ -7,6 +7,7 @@ import {
     useTerminalTabs,
     useKeyboardShortcuts,
     useAppUpdater,
+    usePromptEditorManager,
 } from "./hooks";
 import {
     Header,
@@ -23,7 +24,7 @@ import "./App.css";
 export default function App() {
     const { toastMessage, showToast } = useToast();
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("temas");
+    const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("general");
 
     // 1. Gestión de pestañas y rutas CWD
     const {
@@ -90,7 +91,14 @@ export default function App() {
         handleSelectTheme,
     } = useThemeManager(showToast);
 
-    // 5. Sistema de actualizaciones automáticas
+    // 5. Gestión del Modo de Entrada (Editor Inteligente vs Clásico TTY)
+    const {
+        promptEditorMode,
+        handleTogglePromptEditorMode,
+        handleSetPromptEditorMode,
+    } = usePromptEditorManager(showToast);
+
+    // 6. Sistema de actualizaciones automáticas
     const {
         status: updateStatus,
         newVersion,
@@ -101,7 +109,7 @@ export default function App() {
     } = useAppUpdater(showToast);
 
     // 6. Apertura y control del Modal de Configuración
-    const handleOpenSettings = useCallback((tab: SettingsTab = "temas") => {
+    const handleOpenSettings = useCallback((tab: SettingsTab = "general") => {
         setSettingsInitialTab(tab);
         setSettingsOpen(true);
     }, []);
@@ -192,6 +200,9 @@ export default function App() {
                 case "change-theme":
                     handleCycleTheme();
                     break;
+                case "toggle-editor-mode":
+                    handleTogglePromptEditorMode();
+                    break;
             }
             setSettingsOpen(false);
         },
@@ -252,6 +263,8 @@ export default function App() {
                 fontSize={fontSize}
                 fontFamily={currentFont.family}
                 theme={currentTheme.terminal}
+                promptEditorMode={promptEditorMode}
+                onTogglePromptEditorMode={handleTogglePromptEditorMode}
                 onCwdChange={handleCwdUpdate}
                 tabRefs={tabRefs}
                 onFocusActiveTab={() => tabRefs.current[activeTabId]?.focus()}
@@ -275,6 +288,8 @@ export default function App() {
                 initialTab={settingsInitialTab}
                 appVersion={appVersion}
                 modSymbol={modSymbol}
+                promptEditorMode={promptEditorMode}
+                onSetPromptEditorMode={handleSetPromptEditorMode}
                 currentTheme={currentTheme}
                 availableThemes={availableThemes}
                 onSelectTheme={handleSelectTheme}

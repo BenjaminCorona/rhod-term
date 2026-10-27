@@ -21,7 +21,8 @@ export type ShortcutActionType =
     | "zoom-out"
     | "zoom-reset"
     | "change-font"
-    | "change-theme";
+    | "change-theme"
+    | "toggle-editor-mode";
 
 export type ShortcutCategory = "Todos" | "Pestañas" | "Terminal" | "Navegación";
 

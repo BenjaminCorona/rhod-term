@@ -214,6 +214,7 @@ export function useKeyboardShortcuts({
             label: "Alternar Editor",
             desc: "Alterna entre el editor interactivo con ratón/multilínea y el modo clásico TTY",
             category: "Terminal",
+            actionType: "toggle-editor-mode",
         },
         {
             id: "autocomplete",

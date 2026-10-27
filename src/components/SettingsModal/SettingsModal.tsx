@@ -9,19 +9,23 @@ import {
     Keyboard,
     Minus,
     Plus,
+    SlidersHorizontal,
 } from "lucide-react";
 import { ShortcutItem, FontOption, ThemeOption } from "../../types";
 import { UpdateStatus } from "../../hooks";
 import { Loader2, Sparkles } from "lucide-react";
 import { CATEGORIES } from "../../constants";
 
-export type SettingsTab = "temas" | "tipografia" | "atajos";
+export type SettingsTab = "general" | "temas" | "tipografia" | "atajos";
 
 interface SettingsModalProps {
     isOpen: boolean;
     initialTab?: SettingsTab;
     appVersion: string;
     modSymbol: string;
+    // Modo de Entrada & Terminal
+    promptEditorMode: boolean;
+    onSetPromptEditorMode: (enabled: boolean) => void;
     // Temas
     currentTheme: ThemeOption;
     availableThemes: ThemeOption[];
@@ -50,9 +54,11 @@ interface SettingsModalProps {
 
 export function SettingsModal({
     isOpen,
-    initialTab = "temas",
+    initialTab = "general",
     appVersion,
     modSymbol,
+    promptEditorMode,
+    onSetPromptEditorMode,
     currentTheme,
     availableThemes,
     onSelectTheme,
@@ -128,6 +134,14 @@ export function SettingsModal({
                     <div className="settings-nav-tabs">
                         <button
                             type="button"
+                            className={`settings-tab-btn ${activeTab === "general" ? "active" : ""}`}
+                            onClick={() => setActiveTab("general")}
+                        >
+                            <SlidersHorizontal size={13} />
+                            <span>General</span>
+                        </button>
+                        <button
+                            type="button"
                             className={`settings-tab-btn ${activeTab === "temas" ? "active" : ""}`}
                             onClick={() => setActiveTab("temas")}
                         >
@@ -164,6 +178,91 @@ export function SettingsModal({
 
                 {/* Contenido según la pestaña activa */}
                 <div className="settings-content">
+                    {/* TAB 0: GENERAL / TERMINAL */}
+                    {activeTab === "general" && (
+                        <div className="tab-pane-container">
+                            <div className="settings-section">
+                                <div className="section-meta">
+                                    <h3>Experiencia de Entrada & Terminal</h3>
+                                    <p>
+                                        Personaliza cómo interactúas con los comandos y el flujo de trabajo en la terminal.
+                                    </p>
+                                </div>
+
+                                <div className="setting-card-row">
+                                    <div className="setting-card-info">
+                                        <div className="setting-title-row">
+                                           
+                                            <div>
+                                                <span className="setting-card-title">Modo editor</span>
+                                                <span className="setting-shortcut-badge">{modSymbol}E</span>
+                                            </div>
+                                        </div>
+                                        <p className="setting-card-desc">
+                                            Habilita el editor flotante interactivo con selección de ratón nativo, edición multilínea (Shift+Enter), historial persistente y autocompletado ghost predictivo. Desactívalo para usar la terminal en modo clásico TTY tradicional.
+                                        </p>
+                                    </div>
+
+                                    <div className="setting-card-action">
+                                        <label
+                                            className="toggle-switch-label"
+                                            title={promptEditorMode ? "Desactivar Modo Editor (cambiar a TTY clásico)" : "Activar Modo Editor"}
+                                        >
+                                            <span className={`toggle-switch-status ${promptEditorMode ? "active" : ""}`}>
+                                                {promptEditorMode ? "Activado" : "Clásico"}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={promptEditorMode}
+                                                className={`toggle-switch-btn ${promptEditorMode ? "checked" : ""}`}
+                                                onClick={() => onSetPromptEditorMode(!promptEditorMode)}
+                                            >
+                                                <span className="toggle-switch-thumb" />
+                                            </button>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="mode-preview-wrapper">
+                                    <div className="mode-preview-header">
+                                        <span className="mode-preview-label">
+                                            Modo activo en este momento:
+                                        </span>
+                                        <span className="mode-preview-badge">
+                                            {promptEditorMode ? "Editor Interactivo Multilínea" : "TTY Clásico Tradicional"}
+                                        </span>
+                                    </div>
+                                    {promptEditorMode ? (
+                                        <div className="mode-preview-editor-box">
+                                            <div className="preview-editor-badge">
+                                                <span className="preview-badge-path">~/Documents/rhod-term</span>
+                                            </div>
+                                            <div className="preview-editor-input">
+                                                <span className="preview-cursor-line">cargo build</span>
+                                                <span className="preview-ghost-hint"> --release</span>
+                                            </div>
+                                            <div className="preview-editor-footer">
+                                                <span><kbd>↵</kbd> Ejecutar</span>
+                                                <span><kbd>⇧↵</kbd> Salto de línea</span>
+                                                <span><kbd>⇥</kbd> Completar</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mode-preview-classic-box">
+                                            <span className="preview-classic-prompt">
+                                                <span style={{ color: "var(--text-muted)" }}>~/Documents/rhod-term </span>
+                                                <span style={{ color: "var(--accent)" }}>git:(main) </span>
+                                                <span style={{ color: "#73daca" }}>❯ </span>
+                                                <span className="preview-classic-cursor">cargo build</span>
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* TAB 1: TEMAS */}
                     {activeTab === "temas" && (
                         <div className="tab-pane-container">

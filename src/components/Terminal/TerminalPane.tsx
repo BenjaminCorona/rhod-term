@@ -15,7 +15,6 @@ import { listen } from "@tauri-apps/api/event";
 import { TerminalHandle } from "../../types";
 import { PromptEditor, PromptEditorHandle } from "./PromptEditor";
 import { TerminalWelcomeBanner } from "./TerminalWelcomeBanner";
-import { Sparkles } from "lucide-react";
 import { formatDisplayPath } from "../../utils";
 
 interface GhostSuggestion {
@@ -47,26 +46,41 @@ interface TerminalPaneProps {
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
+    isPromptEditor: boolean;
+    onTogglePromptEditorMode: () => void;
     onCwdChange: (path: string) => void;
 }
 
 export const TerminalPane = forwardRef<TerminalHandle, TerminalPaneProps>(
-    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, onCwdChange }, ref) => {
+    ({ id, active, cwd, initialCwd, fontSize, fontFamily, theme, isPromptEditor, onTogglePromptEditorMode, onCwdChange }, ref) => {
         const mountRef = useRef<HTMLDivElement>(null);
         const promptEditorRef = useRef<PromptEditorHandle>(null);
         const termRef = useRef<Terminal | null>(null);
         const fitRef = useRef<FitAddon | null>(null);
         const [mountCount, setMountCount] = useState(0);
 
-        // Modo de edición interactivo de comandos (ratón, multilínea y autocompletado predictivo)
-        const [isPromptEditor, setIsPromptEditor] = useState<boolean>(() => {
-            try {
-                const saved = localStorage.getItem("rhod_prompt_editor_mode");
-                return saved !== null ? saved === "true" : true;
-            } catch {
-                return true;
+        // Efecto para sincronizar transiciones entre Modo Editor y TTY Clásico
+        const prevIsPromptEditorRef = useRef(isPromptEditor);
+        useEffect(() => {
+            if (prevIsPromptEditorRef.current !== isPromptEditor) {
+                prevIsPromptEditorRef.current = isPromptEditor;
+                if (!isPromptEditor) {
+                    if (active) {
+                        termRef.current?.focus();
+                    }
+                    invoke("write_pty", { id, data: "\r" }).catch(() => {});
+                } else {
+                    if (!hasExecutedCommandRef.current) {
+                        termRef.current?.clear();
+                    } else {
+                        termRef.current?.write("\x1b[2K\r");
+                    }
+                    if (active) {
+                        promptEditorRef.current?.focus();
+                    }
+                }
             }
-        });
+        }, [isPromptEditor, active, id]);
         const [isAlternateBuffer, setIsAlternateBuffer] = useState<boolean>(false);
 const [showWelcome, setShowWelcome] = useState<boolean>(() => {
             try {
@@ -150,6 +164,8 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                 term.write(`\x1b[38;5;242m ${durStr}\x1b[0m\r\n`);
             }
         }, []);
+
+
 
         // Función estable para recalcular la posición pixel-perfect del cursor
         const updateGhostPosition = () => {
@@ -342,26 +358,23 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
             // Atajos de teclado y autocompletado con Flecha Derecha (→) / Tab
             term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
                 if (e.type === "keydown") {
-                    // Si estamos en modo Editor, ninguna pulsación debe ir a xterm directamente
+                    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+                    const key = e.key.toLowerCase();
+
+                    // Si se presiona Cmd+E o Ctrl+E en xterm:
+                    // Retornamos false para que xterm NO consuma la tecla como carácter en el shell,
+                    // y permitimos que handleGlobalKeyDown ejecute togglePromptEditorMode exactamente una vez.
+                    if (isCmdOrCtrl && key === "e") {
+                        return false;
+                    }
+
+                    // Si estamos en modo Editor, ninguna otra pulsación debe ir a xterm directamente
                     if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
-                        const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-                        const key = e.key.toLowerCase();
-                        if (isCmdOrCtrl && key === "e") {
-                            setIsPromptEditor((prev) => {
-                                const next = !prev;
-                                try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
-                                if (!next) {
-                                    invoke("write_pty", { id, data: "\r" }).catch(() => {});
-                                    termRef.current?.focus();
-                                }
-                                return next;
-                            });
-                            return false;
-                        }
                         // Redirigir el foco al PromptEditor y bloquear el evento en xterm
                         promptEditorRef.current?.focus();
                         return false;
                     }
+
                     // Si hay sugerencia ghost activa y se presiona Flecha Derecha o Tab:
                     if ((e.key === "ArrowRight" || e.key === "Tab") && ghostSuggestionRef.current) {
                         const suggestion = ghostSuggestionRef.current;
@@ -389,18 +402,7 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                     }
 
                     // Permitir atajos globales (Cmd/Ctrl + T, W, K, +, -, 0, etc.)
-                    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-                    const key = e.key.toLowerCase();
-
                     if (isCmdOrCtrl) {
-                        if (key === "e") {
-                            setIsPromptEditor((prev) => {
-                                const next = !prev;
-                                try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
-                                return next;
-                            });
-                            return false;
-                        }
                         if (["t", "w", "k", "r", ",", "+", "-", "=", "_", "0"].includes(key)) {
                             return false;
                         }
@@ -422,6 +424,13 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                     finalizeCommandBlock(dur);
                 } else if (data.startsWith("A")) {
                     isAtShellPromptRef.current = true;
+                    if (isPromptEditorRef.current && !isAlternateBufferRef.current) {
+                        if (!hasExecutedCommandRef.current) {
+                            term.clear();
+                        } else {
+                            term.write("\x1b[2K\r");
+                        }
+                    }
                     finalizeCommandBlock();
                 } else if (data.startsWith("C")) {
                     isAtShellPromptRef.current = false;
@@ -698,29 +707,16 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
         useEffect(() => {
             if (!active) return;
             const handleGlobalKeyDown = (e: KeyboardEvent) => {
-                const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-                const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+                const isCmdOrCtrl = e.metaKey || e.ctrlKey;
                 if (isCmdOrCtrl && e.key.toLowerCase() === "e") {
                     e.preventDefault();
                     e.stopPropagation();
-                    setIsPromptEditor((prev) => {
-                        const next = !prev;
-                        try { localStorage.setItem("rhod_prompt_editor_mode", String(next)); } catch {}
-                        if (!next) {
-                            invoke("write_pty", { id, data: "_rhod_enable_classic\r" }).catch(() => {});
-                            termRef.current?.focus();
-                        } else {
-                            if (termRef.current) {
-                                termRef.current.write("\x1b[2K\r");
-                            }
-                        }
-                        return next;
-                    });
+                    onTogglePromptEditorMode();
                 }
             };
             window.addEventListener("keydown", handleGlobalKeyDown);
             return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-        }, [active]);
+        }, [active, onTogglePromptEditorMode]);
 
         // Sincronizar dimensiones cuando se conmuta entre Editor y TTY Clásico
         useEffect(() => {
@@ -864,23 +860,7 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                         </div>
                     )}
 
-                    {/* Botón flotante para regresar al Editor interactivo cuando se está en modo Clásico */}
-                    {!isPromptEditor && !isAlternateBuffer && (
-                        <button
-                            type="button"
-                            className="prompt-activate-floating-btn"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsPromptEditor(true);
-                                try { localStorage.setItem("rhod_prompt_editor_mode", "true"); } catch {}
-                            }}
-                            title="Activar Editor de Comandos (⌘E o Ctrl+E)"
-                        >
-                            <Sparkles size={12} className="prompt-toggle-icon" />
-                            <span>Editor</span>
-                            <kbd>⌘E</kbd>
-                        </button>
-                    )}
+
                 </div>
 
                 {/* 2. Editor interactivo de comandos (ratón, multilínea y autocompletado) */}
@@ -962,12 +942,7 @@ const [showWelcome, setShowWelcome] = useState<boolean>(() => {
                             activeCommandBlockRef.current = null;
                             termRef.current?.clear();
                         }}
-                        onToggleClassicMode={() => {
-                            setIsPromptEditor(false);
-                            try { localStorage.setItem("rhod_prompt_editor_mode", "false"); } catch {}
-                            invoke("write_pty", { id, data: "\r" }).catch(() => {});
-                            termRef.current?.focus();
-                        }}
+                        onToggleClassicMode={onTogglePromptEditorMode}
                     />
                 )}
             </div>

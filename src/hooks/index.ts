@@ -5,3 +5,4 @@ export * from "./useSystemContext";
 export * from "./useTerminalTabs";
 export * from "./useKeyboardShortcuts";
 export * from "./useAppUpdater";
+export * from "./usePromptEditorManager";

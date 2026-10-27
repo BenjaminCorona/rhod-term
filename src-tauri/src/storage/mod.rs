@@ -4,12 +4,18 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-/// Estructura de configuración visual del usuario (fuente, tema, zoom)
+fn default_prompt_editor_mode() -> bool {
+    true
+}
+
+/// Estructura de configuración visual y funcional del usuario (fuente, tema, zoom, modo de entrada)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserConfig {
     pub font_size: f32,
     pub font_id: String,
     pub theme_id: String,
+    #[serde(default = "default_prompt_editor_mode")]
+    pub prompt_editor_mode: bool,
 }
 
 impl Default for UserConfig {
@@ -18,6 +24,7 @@ impl Default for UserConfig {
             font_size: 14.0,
             font_id: "meslo".to_string(),
             theme_id: "rhod-dark".to_string(),
+            prompt_editor_mode: true,
         }
     }
 }
@@ -168,6 +175,14 @@ mod tests {
         assert_eq!(deserialized.font_size, 14.0);
         assert_eq!(deserialized.font_id, "meslo");
         assert_eq!(deserialized.theme_id, "rhod-dark");
+        assert_eq!(deserialized.prompt_editor_mode, true);
+    }
+
+    #[test]
+    fn test_config_backwards_compatibility() {
+        let json = r#"{"font_size": 16.0, "font_id": "jetbrains", "theme_id": "tokyo-night"}"#;
+        let deserialized: UserConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized.prompt_editor_mode, true);
     }
 
     #[test]

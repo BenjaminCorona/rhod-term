@@ -10,7 +10,7 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ITheme } from "@xterm/xterm";
-import { Folder, ArrowRight, Sparkles } from "lucide-react";
+import { Folder, ArrowRight } from "lucide-react";
 import { formatDisplayPath } from "../../utils";
 
 interface GhostSuggestion {
@@ -423,7 +423,7 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
                 />
             </div>
 
-            {/* 3. Barra inferior minimalista de atajos e indicador de modo */}
+            {/* 3. Barra inferior minimalista de atajos */}
             <div className="prompt-editor-footer">
                 <div className="prompt-footer-hints">
                     <span className="prompt-hint-item">
@@ -435,21 +435,6 @@ export const PromptEditor = forwardRef<PromptEditorHandle, PromptEditorProps>(
                     <span className="prompt-hint-item">
                         <kbd className="prompt-kbd">⇥</kbd> Completar
                     </span>
-                </div>
-
-                <div className="prompt-footer-actions">
-                    <button
-                        type="button"
-                        className="prompt-mode-toggle-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleClassicMode();
-                        }}
-                        title="Alternar a modo clásico TTY (⌘E o Ctrl+E)"
-                    >
-                        <Sparkles size={11} className="prompt-toggle-icon" />
-                        <span className="prompt-toggle-text">Editor</span>
-                    </button>
                 </div>
             </div>
         </div>

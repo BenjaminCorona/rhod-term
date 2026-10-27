@@ -5,7 +5,7 @@ interface StatusBarProps {
     sessionsCount: number;
     modSymbol: string;
     onCopyVersion?: () => void;
-    onOpenSettings: (tab?: "temas" | "tipografia" | "atajos") => void;
+    onOpenSettings: (tab?: "general" | "temas" | "tipografia" | "atajos") => void;
 }
 
 export function StatusBar({
@@ -39,7 +39,7 @@ export function StatusBar({
                     <button
                         type="button"
                         className="btn-action btn-settings"
-                        onClick={() => onOpenSettings("atajos")}
+                        onClick={() => onOpenSettings("general")}
                         title={`Configuración y atajos (${modSymbol}, o ${modSymbol}K)`}
                     >
                         <SlidersHorizontal size={12} />

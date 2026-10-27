@@ -10,6 +10,8 @@ interface TerminalContainerProps {
     fontSize: number;
     fontFamily: string;
     theme: ITheme;
+    promptEditorMode: boolean;
+    onTogglePromptEditorMode: () => void;
     onCwdChange: (tabId: string, path: string) => void;
     tabRefs: React.MutableRefObject<Record<string, TerminalHandle | null>>;
     onFocusActiveTab: () => void;
@@ -23,6 +25,8 @@ export function TerminalContainer({
     fontSize,
     fontFamily,
     theme,
+    promptEditorMode,
+    onTogglePromptEditorMode,
     onCwdChange,
     tabRefs,
     onFocusActiveTab,
@@ -48,6 +52,8 @@ export function TerminalContainer({
                     fontSize={fontSize}
                     fontFamily={fontFamily}
                     theme={theme}
+                    isPromptEditor={promptEditorMode}
+                    onTogglePromptEditorMode={onTogglePromptEditorMode}
                     onCwdChange={(newPath) => onCwdChange(tab.id, newPath)}
                     ref={(el) => {
                         tabRefs.current[tab.id] = el;

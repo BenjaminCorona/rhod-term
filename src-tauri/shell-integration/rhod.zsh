@@ -94,25 +94,7 @@ if (( $+functions[add-zsh-hook] )); then
   add-zsh-hook preexec _rhod_preexec
 fi
 
-_rhod_enable_classic() {
-  _RHOD_CLASSIC_MODE=1
+# Configuración del prompt nativo con ruta completa, duración y branch de git
+if [[ -z "$_RHOD_CUSTOM_PROMPT" ]]; then
   PROMPT='%F{244}%~%f %F{242}${_rhod_last_duration}%f${vcs_info_msg_0_} %F{119}❯%f '
-  zle && zle reset-prompt 2>/dev/null
-}
-
-_rhod_enable_editor() {
-  unset _RHOD_CLASSIC_MODE
-  PROMPT=""
-  RPROMPT=""
-  zle && zle reset-prompt 2>/dev/null
-}
-
-# En modo Editor (por defecto en Rhod), no mostramos prompt en xterm para que la terminal esté 100% limpia
-if [[ -n "$RHOD_TERMINAL" && -z "$_RHOD_CLASSIC_MODE" ]]; then
-  PROMPT=""
-  RPROMPT=""
-else
-  if [[ -z "$_RHOD_CUSTOM_PROMPT" ]]; then
-    PROMPT='%F{244}%~%f %F{242}${_rhod_last_duration}%f${vcs_info_msg_0_} %F{119}❯%f '
-  fi
 fi
